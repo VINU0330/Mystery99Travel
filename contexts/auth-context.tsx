@@ -14,7 +14,6 @@ import { auth } from "@/lib/firebase"
 interface AuthContextType {
   currentUser: User | null
   loading: boolean
-  error: string | null
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
@@ -33,87 +32,43 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [initialized, setInitialized] = useState(false)
 
   useEffect(() => {
-    try {
-      const unsubscribe = onAuthStateChanged(
-        auth,
-        (user) => {
-          setCurrentUser(user)
-          setLoading(false)
-          setInitialized(true)
-        },
-        (error) => {
-          console.error("Auth state change error:", error)
-          setError(error.message)
-          setLoading(false)
-          setInitialized(true)
-        },
-      )
-
-      return unsubscribe
-    } catch (error) {
-      console.error("Firebase auth initialization error:", error)
-      setError(error instanceof Error ? error.message : "Failed to initialize authentication")
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user)
       setLoading(false)
-      setInitialized(true)
-      return () => {}
-    }
+    })
+
+    return unsubscribe
   }, [])
 
   async function signup(email: string, password: string) {
-    try {
-      setError(null)
-      return createUserWithEmailAndPassword(auth, email, password).then((userCredential) => {
-        // Signed up
-        setCurrentUser(userCredential.user)
-      })
-    } catch (error) {
-      console.error("Signup error in context:", error)
-      setError(error instanceof Error ? error.message : "Failed to create account")
-      throw error
-    }
+    return createUserWithEmailAndPassword(auth, email, password).then((userCredential) => {
+      // Signed up
+      setCurrentUser(userCredential.user)
+    })
   }
 
   async function login(email: string, password: string) {
-    try {
-      setError(null)
-      return signInWithEmailAndPassword(auth, email, password).then((userCredential) => {
-        // Signed in
-        setCurrentUser(userCredential.user)
-      })
-    } catch (error) {
-      console.error("Login error in context:", error)
-      setError(error instanceof Error ? error.message : "Failed to sign in")
-      throw error
-    }
+    return signInWithEmailAndPassword(auth, email, password).then((userCredential) => {
+      // Signed in
+      setCurrentUser(userCredential.user)
+    })
   }
 
   async function logout() {
-    try {
-      setError(null)
-      return signOut(auth).then(() => {
-        setCurrentUser(null)
-      })
-    } catch (error) {
-      console.error("Logout error:", error)
-      setError(error instanceof Error ? error.message : "Failed to sign out")
-      throw error
-    }
+    return signOut(auth).then(() => {
+      setCurrentUser(null)
+    })
   }
 
   const value = {
     currentUser,
     loading,
-    error,
     login,
     signup,
     logout,
   }
 
-  return (
-    <AuthContext.Provider value={value}>{initialized ? children : <div>Initializing...</div>}</AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>
 }

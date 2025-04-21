@@ -1,18 +1,16 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { CardContainer } from "@/components/ui/card-container"
 import { motion } from "framer-motion"
+import { useAuth } from "@/contexts/auth-context"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import Link from "next/link"
-import { initializeApp } from "firebase/app"
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth"
-import { firebaseConfig } from "@/lib/firebase-config"
 
 export default function Signup() {
   const [email, setEmail] = useState("")
@@ -20,21 +18,8 @@ export default function Signup() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const [firebaseInitialized, setFirebaseInitialized] = useState(false)
   const router = useRouter()
-
-  // Initialize Firebase on component mount
-  useEffect(() => {
-    try {
-      console.log("Initializing Firebase in Signup component...")
-      initializeApp(firebaseConfig)
-      setFirebaseInitialized(true)
-      console.log("Firebase initialized successfully in Signup component")
-    } catch (error) {
-      console.error("Error initializing Firebase in Signup component:", error)
-      setError("Failed to initialize authentication. Please try again later.")
-    }
-  }, [])
+  const { signup } = useAuth()
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,52 +31,14 @@ export default function Signup() {
       return
     }
 
-    // Validate password strength
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long")
-      return
-    }
-
-    if (!firebaseInitialized) {
-      setError("Authentication service is not initialized. Please try again later.")
-      return
-    }
-
     setIsLoading(true)
 
     try {
-      console.log("Starting signup process...")
-      const auth = getAuth()
-
-      // Create user
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-      console.log("Signup successful, redirecting...")
-
-      // Set session cookie
-      document.cookie = `session=${await userCredential.user.getIdToken()}; path=/; max-age=3600; SameSite=Strict`
-
+      await signup(email, password)
       router.push("/service-selection")
     } catch (error) {
       console.error("Signup error:", error)
-
-      // Handle specific Firebase error codes
-      if (error instanceof Error) {
-        const errorMessage = error.message
-
-        if (errorMessage.includes("auth/email-already-in-use")) {
-          setError("This email is already in use. Please try logging in instead.")
-        } else if (errorMessage.includes("auth/invalid-email")) {
-          setError("Please enter a valid email address.")
-        } else if (errorMessage.includes("auth/weak-password")) {
-          setError("Password is too weak. Please use a stronger password.")
-        } else if (errorMessage.includes("auth/configuration-not-found")) {
-          setError("Firebase configuration error. Please check your environment variables.")
-        } else {
-          setError(`Failed to create an account: ${errorMessage}`)
-        }
-      } else {
-        setError("An unexpected error occurred. Please try again later.")
-      }
+      setError("Failed to create an account. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -111,13 +58,6 @@ export default function Signup() {
             <h1 className="text-2xl font-bold text-gray-800">Create Account</h1>
             <p className="text-gray-500 mt-1">Sign up to get started</p>
           </div>
-
-          {!firebaseInitialized && (
-            <Alert className="mb-4 bg-yellow-50 border-yellow-200">
-              <AlertCircle className="h-4 w-4 text-yellow-500" />
-              <AlertDescription className="text-yellow-700">Initializing authentication service...</AlertDescription>
-            </Alert>
-          )}
 
           {error && (
             <Alert variant="destructive" className="mb-4">
@@ -175,7 +115,7 @@ export default function Signup() {
             <Button
               type="submit"
               className="w-full h-11 bg-primary-600 hover:bg-primary-700 text-white"
-              disabled={isLoading || !firebaseInitialized}
+              disabled={isLoading}
             >
               {isLoading ? "Creating Account..." : "Create Account"}
             </Button>
