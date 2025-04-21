@@ -15,14 +15,10 @@ import {
   calculateDayTimeServicePayment,
   calculateVehicleDeliveryPayment,
 } from "@/lib/utils"
-import { useAuth } from "@/contexts/auth-context"
-import { saveTrip } from "@/services/trip-service"
-import { toast } from "@/components/ui/use-toast"
 
 export default function RideCalculator() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { currentUser } = useAuth()
 
   // Service type
   const [serviceType, setServiceType] = useState("drink-and-drive")
@@ -57,9 +53,6 @@ export default function RideCalculator() {
   const [totalPayment, setTotalPayment] = useState(0)
   const [companyCommission, setCompanyCommission] = useState(0)
   const [driverPayment, setDriverPayment] = useState(0)
-
-  // Loading state
-  const [isSaving, setIsSaving] = useState(false)
 
   // Timer reference
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -168,59 +161,9 @@ export default function RideCalculator() {
     }
   }
 
-  // Handle final end trip and save to Firebase
-  const handleFinalEndTrip = async () => {
-    if (!currentUser) {
-      toast({
-        title: "Authentication Error",
-        description: "You must be logged in to save trip data.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsSaving(true)
-
-    try {
-      // Save trip data to Firestore
-      await saveTrip({
-        userId: currentUser.uid,
-        serviceType,
-        pickupLocation,
-        dropLocation,
-        pickupArea: serviceType !== "vehicle-delivery" ? pickupArea : undefined,
-        dropArea: serviceType !== "vehicle-delivery" ? dropArea : undefined,
-        endLocationArea: serviceType === "vehicle-delivery" ? endLocationArea : undefined,
-        startMeterCount: startMeterCount ? Number.parseFloat(startMeterCount) : undefined,
-        endMeterCount: endMeterCount ? Number.parseFloat(endMeterCount) : undefined,
-        distance: totalDistance,
-        tripDuration: finalTripDuration,
-        elapsedTime: finalElapsedTime,
-        totalPayment,
-        companyCommission,
-        driverPayment,
-        customerName,
-        phoneNumber,
-        paymentMethod,
-        status: paymentMethod === "cash" ? "completed" : "pending",
-      })
-
-      toast({
-        title: "Trip Saved",
-        description: "Trip details have been saved successfully.",
-      })
-
-      setStep(3)
-    } catch (error) {
-      console.error("Error saving trip:", error)
-      toast({
-        title: "Error",
-        description: "Failed to save trip data. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsSaving(false)
-    }
+  // Handle final end trip
+  const handleFinalEndTrip = () => {
+    setStep(3)
   }
 
   // Reset and start a new ride
@@ -568,12 +511,8 @@ export default function RideCalculator() {
               </div>
             </CardContainer>
 
-            <Button
-              className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={handleFinalEndTrip}
-              disabled={isSaving}
-            >
-              {isSaving ? "Saving..." : "End Trip"}
+            <Button className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleFinalEndTrip}>
+              End Trip
             </Button>
           </motion.div>
         )

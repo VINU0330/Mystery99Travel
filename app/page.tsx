@@ -1,38 +1,30 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { CardContainer } from "@/components/ui/card-container"
 import { motion } from "framer-motion"
-import { useAuth } from "@/contexts/auth-context"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
 
 export default function Login() {
-  const [email, setEmail] = useState("")
+  const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
   const router = useRouter()
-  const { login } = useAuth()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
     setIsLoading(true)
 
-    try {
-      await login(email, password)
-      router.push("/service-selection")
-    } catch (error) {
-      console.error("Login error:", error)
-      setError("Failed to sign in. Please check your credentials.")
-    } finally {
-      setIsLoading(false)
-    }
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 800))
+
+    // In a real app, you would validate credentials here
+    setIsLoading(false)
+    router.push("/service-selection")
   }
 
   return (
@@ -50,24 +42,16 @@ export default function Login() {
             <p className="text-gray-500 mt-1">Sign in to your account</p>
           </div>
 
-          {error && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-gray-700">
-                Email
+              <label htmlFor="username" className="text-sm font-medium text-gray-700">
+                Username or Email
               </label>
               <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username or email"
                 required
                 className="h-11"
               />
@@ -103,7 +87,7 @@ export default function Login() {
 
             <div className="text-center text-sm">
               <span className="text-gray-600">New to Mystery99?</span>{" "}
-              <a href="/signup" className="text-primary-600 hover:underline font-medium">
+              <a href="#" className="text-primary-600 hover:underline font-medium">
                 Create an account
               </a>
             </div>

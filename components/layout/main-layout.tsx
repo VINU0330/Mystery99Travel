@@ -3,12 +3,11 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { useAuth } from "@/contexts/auth-context"
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -20,8 +19,6 @@ export default function MainLayout({ children, showHeader = true, title }: MainL
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const pathname = usePathname()
-  const router = useRouter()
-  const { currentUser, logout } = useAuth()
 
   // Check if we're on mobile
   useEffect(() => {
@@ -41,16 +38,6 @@ export default function MainLayout({ children, showHeader = true, title }: MainL
   useEffect(() => {
     setIsSidebarOpen(false)
   }, [pathname])
-
-  // Handle logout
-  const handleLogout = async () => {
-    try {
-      await logout()
-      router.push("/")
-    } catch (error) {
-      console.error("Logout error:", error)
-    }
-  }
 
   // Navigation items
   const navItems = [
@@ -248,7 +235,7 @@ export default function MainLayout({ children, showHeader = true, title }: MainL
                   </svg>
                 </div>
                 <div className="text-white">Hello</div>
-                <div className="text-white font-medium">{currentUser?.email || "User"}</div>
+                <div className="text-white font-medium">User Name</div>
                 <div className="flex items-center justify-center mt-2">
                   <div className="h-3 w-3 rounded-full bg-green-400 mr-2"></div>
                   <span className="text-white text-xs">Online</span>
@@ -279,10 +266,7 @@ export default function MainLayout({ children, showHeader = true, title }: MainL
 
               {/* Sign Out */}
               <div className="p-4 border-t">
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
-                >
+                <Link href="/" className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
@@ -300,7 +284,7 @@ export default function MainLayout({ children, showHeader = true, title }: MainL
                     <line x1="21" y1="12" x2="9" y2="12"></line>
                   </svg>
                   Sign Out
-                </button>
+                </Link>
               </div>
             </div>
           </motion.div>
