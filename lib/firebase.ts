@@ -1,27 +1,7 @@
-import { initializeApp } from "firebase/app"
+import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-}
-
-// Check if all required Firebase config values are present
-const configValues = Object.values(firebaseConfig)
-const allConfigValuesPresent = configValues.every((value) => value !== undefined && value !== null && value !== "")
-
-if (!allConfigValuesPresent) {
-  console.error(
-    "Firebase configuration is incomplete. Missing values:",
-    Object.keys(firebaseConfig).filter((key) => !firebaseConfig[key as keyof typeof firebaseConfig]),
-  )
-}
+import { firebaseConfig } from "./firebase-config"
 
 // Initialize Firebase
 let app
@@ -29,18 +9,29 @@ let auth
 let db
 
 try {
-  app = initializeApp(firebaseConfig)
+  // Check if Firebase is already initialized
+  if (!getApps().length) {
+    console.log("Initializing Firebase app...")
+    app = initializeApp(firebaseConfig)
+  } else {
+    console.log("Firebase app already initialized, getting existing app...")
+    app = getApp()
+  }
+
   auth = getAuth(app)
   db = getFirestore(app)
-  console.log("Firebase initialized successfully")
+  console.log("Firebase services initialized successfully")
 } catch (error) {
   console.error("Error initializing Firebase:", error)
-  // Create a placeholder app for development if config is missing
-  if (!allConfigValuesPresent && process.env.NODE_ENV === "development") {
-    console.warn("Using placeholder Firebase app for development")
+
+  // Create placeholder objects for development
+  if (process.env.NODE_ENV === "development") {
+    console.warn("Using placeholder Firebase objects for development")
     app = {} as any
     auth = {} as any
     db = {} as any
+  } else {
+    throw error // Re-throw in production
   }
 }
 

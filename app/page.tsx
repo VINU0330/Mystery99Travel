@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
@@ -10,38 +10,45 @@ import { motion } from "framer-motion"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import Link from "next/link"
-import { FirebaseConfigCheck } from "@/components/firebase-config-check"
-import { signInWithEmailAndPassword, getAuth } from "firebase/auth"
 import { initializeApp } from "firebase/app"
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth"
+import { firebaseConfig } from "@/lib/firebase-config"
 
 export default function Login() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [firebaseInitialized, setFirebaseInitialized] = useState(false)
   const router = useRouter()
+
+  // Initialize Firebase on component mount
+  useEffect(() => {
+    try {
+      console.log("Initializing Firebase in Login component...")
+      initializeApp(firebaseConfig)
+      setFirebaseInitialized(true)
+      console.log("Firebase initialized successfully in Login component")
+    } catch (error) {
+      console.error("Error initializing Firebase in Login component:", error)
+      setError("Failed to initialize authentication. Please try again later.")
+    }
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setIsLoading(true)
 
+    if (!firebaseInitialized) {
+      setError("Authentication service is not initialized. Please try again later.")
+      setIsLoading(false)
+      return
+    }
+
     try {
       console.log("Starting login process...")
-
-      // Get Firebase config directly from environment variables
-      const firebaseConfig = {
-        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-      }
-
-      // Initialize Firebase directly in this component for testing
-      const app = initializeApp(firebaseConfig)
-      const auth = getAuth(app)
+      const auth = getAuth()
 
       // Sign in user
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
@@ -92,7 +99,12 @@ export default function Login() {
             <p className="text-gray-500 mt-1">Sign in to your account</p>
           </div>
 
-          <FirebaseConfigCheck />
+          {!firebaseInitialized && (
+            <Alert className="mb-4 bg-yellow-50 border-yellow-200">
+              <AlertCircle className="h-4 w-4 text-yellow-500" />
+              <AlertDescription className="text-yellow-700">Initializing authentication service...</AlertDescription>
+            </Alert>
+          )}
 
           {error && (
             <Alert variant="destructive" className="mb-4">
@@ -140,7 +152,7 @@ export default function Login() {
             <Button
               type="submit"
               className="w-full h-11 bg-primary-600 hover:bg-primary-700 text-white"
-              disabled={isLoading}
+              disabled={isLoading || !firebaseInitialized}
             >
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
