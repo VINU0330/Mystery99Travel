@@ -7,18 +7,22 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { CardContainer } from "@/components/ui/card-container"
+import MainLayout from "@/components/layout/main-layout"
 import { motion } from "framer-motion"
 import {
   formatTime,
-  formatTimeFromComponents,
   calculateDrinkAndDrivePayment,
   calculateDayTimeServicePayment,
   calculateVehicleDeliveryPayment,
 } from "@/lib/utils"
+import { useAuth } from "@/contexts/auth-context"
+import { saveTrip } from "@/services/trip-service"
+import { toast } from "@/components/ui/use-toast"
 
 export default function RideCalculator() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { currentUser } = useAuth()
 
   // Service type
   const [serviceType, setServiceType] = useState("drink-and-drive")
@@ -48,17 +52,14 @@ export default function RideCalculator() {
   const [finalTripDuration, setFinalTripDuration] = useState("")
   const [finalElapsedTime, setFinalElapsedTime] = useState(0)
 
-  // Manual time input
-  const [hours, setHours] = useState("0")
-  const [minutes, setMinutes] = useState("0")
-  const [seconds, setSeconds] = useState("0")
-  const [isManualTime, setIsManualTime] = useState(false)
-
   // Payment calculation
   const [totalDistance, setTotalDistance] = useState(0)
   const [totalPayment, setTotalPayment] = useState(0)
   const [companyCommission, setCompanyCommission] = useState(0)
   const [driverPayment, setDriverPayment] = useState(0)
+
+  // Loading state
+  const [isSaving, setIsSaving] = useState(false)
 
   // Timer reference
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -77,23 +78,6 @@ export default function RideCalculator() {
     }
   }, [searchParams])
 
-  // Update trip duration when manual inputs change
-  useEffect(() => {
-    if (isManualTime) {
-      const h = Number.parseInt(hours) || 0
-      const m = Number.parseInt(minutes) || 0
-      const s = Number.parseInt(seconds) || 0
-
-      // Calculate total seconds for payment calculation
-      const totalSeconds = h * 3600 + m * 60 + s
-      setElapsedTime(totalSeconds)
-
-      // Format for display
-      const formattedTime = formatTimeFromComponents(h, m, s)
-      setTripDuration(formattedTime)
-    }
-  }, [hours, minutes, seconds, isManualTime])
-
   // Handle pickup marking
   const handleMarkAsPickup = () => {
     const now = new Date()
@@ -105,12 +89,11 @@ export default function RideCalculator() {
     setPickupTime(formattedTime)
     setTripStartTime(Date.now())
     setIsTimerRunning(true)
-    setIsManualTime(false)
 
     // Start the timer
     if (timerRef.current) clearInterval(timerRef.current)
     timerRef.current = setInterval(() => {
-      if (tripStartTime && !isManualTime) {
+      if (tripStartTime) {
         const elapsed = Math.floor((Date.now() - tripStartTime) / 1000)
         setElapsedTime(elapsed)
         setTripDuration(formatTime(elapsed))
@@ -136,34 +119,6 @@ export default function RideCalculator() {
     setFinalTripDuration(tripDuration) // Save the current trip duration
     setFinalElapsedTime(elapsedTime) // Save the current elapsed time in seconds
     if (timerRef.current) clearInterval(timerRef.current)
-  }
-
-  // Toggle between automatic and manual time input
-  const toggleManualTime = () => {
-    if (!isManualTime) {
-      // When switching to manual, initialize with current elapsed time
-      const h = Math.floor(elapsedTime / 3600)
-      const m = Math.floor((elapsedTime % 3600) / 60)
-      const s = elapsedTime % 60
-
-      setHours(h.toString())
-      setMinutes(m.toString())
-      setSeconds(s.toString())
-
-      // Stop the automatic timer
-      if (timerRef.current) clearInterval(timerRef.current)
-    } else {
-      // When switching back to automatic, restart the timer if it was running
-      if (isTimerRunning && tripStartTime) {
-        timerRef.current = setInterval(() => {
-          const elapsed = Math.floor((Date.now() - tripStartTime) / 1000)
-          setElapsedTime(elapsed)
-          setTripDuration(formatTime(elapsed))
-        }, 1000)
-      }
-    }
-
-    setIsManualTime(!isManualTime)
   }
 
   // Handle trip end and calculate payment
@@ -213,9 +168,59 @@ export default function RideCalculator() {
     }
   }
 
-  // Handle final end trip
-  const handleFinalEndTrip = () => {
-    setStep(3)
+  // Handle final end trip and save to Firebase
+  const handleFinalEndTrip = async () => {
+    if (!currentUser) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to save trip data.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSaving(true)
+
+    try {
+      // Save trip data to Firestore
+      await saveTrip({
+        userId: currentUser.uid,
+        serviceType,
+        pickupLocation,
+        dropLocation,
+        pickupArea: serviceType !== "vehicle-delivery" ? pickupArea : undefined,
+        dropArea: serviceType !== "vehicle-delivery" ? dropArea : undefined,
+        endLocationArea: serviceType === "vehicle-delivery" ? endLocationArea : undefined,
+        startMeterCount: startMeterCount ? Number.parseFloat(startMeterCount) : undefined,
+        endMeterCount: endMeterCount ? Number.parseFloat(endMeterCount) : undefined,
+        distance: totalDistance,
+        tripDuration: finalTripDuration,
+        elapsedTime: finalElapsedTime,
+        totalPayment,
+        companyCommission,
+        driverPayment,
+        customerName,
+        phoneNumber,
+        paymentMethod,
+        status: paymentMethod === "cash" ? "completed" : "pending",
+      })
+
+      toast({
+        title: "Trip Saved",
+        description: "Trip details have been saved successfully.",
+      })
+
+      setStep(3)
+    } catch (error) {
+      console.error("Error saving trip:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save trip data. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // Reset and start a new ride
@@ -243,10 +248,6 @@ export default function RideCalculator() {
     setCompanyCommission(0)
     setDriverPayment(0)
     setFinalTripDuration("")
-    setHours("0")
-    setMinutes("0")
-    setSeconds("0")
-    setIsManualTime(false)
 
     // Go back to service selection
     router.push("/service-selection")
@@ -261,7 +262,7 @@ export default function RideCalculator() {
 
   // Update timer status when isTimerRunning changes
   useEffect(() => {
-    if (isTimerRunning && !isManualTime) {
+    if (isTimerRunning) {
       if (timerRef.current) clearInterval(timerRef.current)
       timerRef.current = setInterval(() => {
         if (tripStartTime) {
@@ -277,7 +278,7 @@ export default function RideCalculator() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [isTimerRunning, tripStartTime, isManualTime])
+  }, [isTimerRunning, tripStartTime])
 
   // Get service title based on service type
   const getServiceTitle = () => {
@@ -290,64 +291,6 @@ export default function RideCalculator() {
         return "Vehicle Delivery Service"
       default:
         return "Ride Service"
-    }
-  }
-
-  // Render trip duration input based on mode
-  const renderTripDurationInput = () => {
-    if (isManualTime) {
-      return (
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <label className="text-xs font-medium">Hours</label>
-            <Input type="number" min="0" value={hours} onChange={(e) => setHours(e.target.value)} className="h-10" />
-          </div>
-          <div>
-            <label className="text-xs font-medium">Minutes</label>
-            <Input
-              type="number"
-              min="0"
-              max="59"
-              value={minutes}
-              onChange={(e) => setMinutes(e.target.value)}
-              className="h-10"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium">Seconds</label>
-            <Input
-              type="number"
-              min="0"
-              max="59"
-              value={seconds}
-              onChange={(e) => setSeconds(e.target.value)}
-              className="h-10"
-            />
-          </div>
-        </div>
-      )
-    } else {
-      return (
-        <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center justify-center font-mono">
-          {tripDuration}
-        </div>
-      )
-    }
-  }
-
-  // Get step title
-  const getStepTitle = () => {
-    switch (step) {
-      case 0:
-        return "Pickup Details"
-      case 1:
-        return "Drop-off Details"
-      case 2:
-        return "Customer Payment"
-      case 3:
-        return "Rider Payment"
-      default:
-        return "Ride Details"
     }
   }
 
@@ -397,13 +340,10 @@ export default function RideCalculator() {
                     </div>
                   </div>
                   <div>
-                    <div className="flex justify-between items-center">
-                      <label className="text-sm font-medium">Trip Duration</label>
-                      <Button variant="ghost" size="sm" onClick={toggleManualTime} className="h-6 text-xs px-2">
-                        {isManualTime ? "Auto" : "Manual"}
-                      </Button>
+                    <label className="text-sm font-medium">Trip Duration</label>
+                    <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center justify-center font-mono">
+                      {tripDuration}
                     </div>
-                    {renderTripDurationInput()}
                   </div>
                 </div>
 
@@ -499,13 +439,10 @@ export default function RideCalculator() {
                     </div>
                   </div>
                   <div>
-                    <div className="flex justify-between items-center">
-                      <label className="text-sm font-medium">Trip Duration</label>
-                      <Button variant="ghost" size="sm" onClick={toggleManualTime} className="h-6 text-xs px-2">
-                        {isManualTime ? "Auto" : "Manual"}
-                      </Button>
+                    <label className="text-sm font-medium">Trip Duration</label>
+                    <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center justify-center font-mono">
+                      {tripDuration}
                     </div>
-                    {renderTripDurationInput()}
                   </div>
                 </div>
 
@@ -631,8 +568,12 @@ export default function RideCalculator() {
               </div>
             </CardContainer>
 
-            <Button className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleFinalEndTrip}>
-              End Trip
+            <Button
+              className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={handleFinalEndTrip}
+              disabled={isSaving}
+            >
+              {isSaving ? "Saving..." : "End Trip"}
             </Button>
           </motion.div>
         )
@@ -674,10 +615,19 @@ export default function RideCalculator() {
   }
 
   return (
-    <div className="container py-10">
-      <h1 className="text-2xl font-bold mb-6">{getServiceTitle()}</h1>
-      <h2 className="text-xl font-semibold mb-4">{getStepTitle()}</h2>
-      {renderStep()}
-    </div>
+    <MainLayout title={getServiceTitle()}>
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">
+          {step === 0
+            ? "Pickup Details"
+            : step === 1
+              ? "Drop-off Details"
+              : step === 2
+                ? "Customer Payment"
+                : "Rider Payment"}
+        </h2>
+        {renderStep()}
+      </div>
+    </MainLayout>
   )
 }

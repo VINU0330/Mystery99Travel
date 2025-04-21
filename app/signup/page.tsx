@@ -11,23 +11,37 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { FirebaseConfigCheck } from "@/components/firebase-config-check"
-import { signInWithEmailAndPassword, getAuth } from "firebase/auth"
+import { createUserWithEmailAndPassword, getAuth } from "firebase/auth"
 import { initializeApp } from "firebase/app"
 
-export default function Login() {
+export default function Signup() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      setError("Passwords do not match")
+      return
+    }
+
+    // Validate password strength
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long")
+      return
+    }
+
     setIsLoading(true)
 
     try {
-      console.log("Starting login process...")
+      console.log("Starting signup process...")
 
       // Get Firebase config directly from environment variables
       const firebaseConfig = {
@@ -39,35 +53,45 @@ export default function Login() {
         appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
       }
 
+      // Log Firebase config (without sensitive values)
+      console.log("Firebase config:", {
+        apiKeyExists: !!firebaseConfig.apiKey,
+        authDomainExists: !!firebaseConfig.authDomain,
+        projectIdExists: !!firebaseConfig.projectId,
+        storageBucketExists: !!firebaseConfig.storageBucket,
+        messagingSenderIdExists: !!firebaseConfig.messagingSenderId,
+        appIdExists: !!firebaseConfig.appId,
+      })
+
       // Initialize Firebase directly in this component for testing
       const app = initializeApp(firebaseConfig)
       const auth = getAuth(app)
 
-      // Sign in user
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
-      console.log("Login successful, redirecting...")
+      // Create user
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      console.log("Signup successful, redirecting...")
 
       // Set session cookie
       document.cookie = `session=${await userCredential.user.getIdToken()}; path=/; max-age=3600; SameSite=Strict`
 
       router.push("/service-selection")
     } catch (error) {
-      console.error("Login error:", error)
+      console.error("Signup error:", error)
 
       // Handle specific Firebase error codes
       if (error instanceof Error) {
         const errorMessage = error.message
 
-        if (errorMessage.includes("auth/user-not-found") || errorMessage.includes("auth/wrong-password")) {
-          setError("Invalid email or password. Please try again.")
+        if (errorMessage.includes("auth/email-already-in-use")) {
+          setError("This email is already in use. Please try logging in instead.")
         } else if (errorMessage.includes("auth/invalid-email")) {
           setError("Please enter a valid email address.")
-        } else if (errorMessage.includes("auth/too-many-requests")) {
-          setError("Too many failed login attempts. Please try again later.")
+        } else if (errorMessage.includes("auth/weak-password")) {
+          setError("Password is too weak. Please use a stronger password.")
         } else if (errorMessage.includes("auth/configuration-not-found")) {
           setError("Firebase configuration error. Please check your environment variables.")
         } else {
-          setError(`Failed to sign in: ${errorMessage}`)
+          setError(`Failed to create an account: ${errorMessage}`)
         }
       } else {
         setError("An unexpected error occurred. Please try again later.")
@@ -88,8 +112,8 @@ export default function Login() {
         <CardContainer>
           <div className="flex flex-col items-center mb-8">
             <img src="/logo.png" alt="Mystery 99 Travels & Tours" className="h-24 md:h-32 mb-4" />
-            <h1 className="text-2xl font-bold text-gray-800">Welcome Back</h1>
-            <p className="text-gray-500 mt-1">Sign in to your account</p>
+            <h1 className="text-2xl font-bold text-gray-800">Create Account</h1>
+            <p className="text-gray-500 mt-1">Sign up to get started</p>
           </div>
 
           <FirebaseConfigCheck />
@@ -101,7 +125,7 @@ export default function Login() {
             </Alert>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleSignup} className="space-y-5">
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium text-gray-700">
                 Email
@@ -118,20 +142,30 @@ export default function Login() {
             </div>
 
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label htmlFor="password" className="text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <Link href="/forgot-password" className="text-xs text-primary-600 hover:underline">
-                  Forgot Password?
-                </Link>
-              </div>
+              <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                Password
+              </label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder="Create a password"
+                required
+                className="h-11"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
+                Confirm Password
+              </label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm your password"
                 required
                 className="h-11"
               />
@@ -142,13 +176,13 @@ export default function Login() {
               className="w-full h-11 bg-primary-600 hover:bg-primary-700 text-white"
               disabled={isLoading}
             >
-              {isLoading ? "Signing in..." : "Sign In"}
+              {isLoading ? "Creating Account..." : "Create Account"}
             </Button>
 
             <div className="text-center text-sm">
-              <span className="text-gray-600">New to Mystery99?</span>{" "}
-              <Link href="/signup" className="text-primary-600 hover:underline font-medium">
-                Create an account
+              <span className="text-gray-600">Already have an account?</span>{" "}
+              <Link href="/" className="text-primary-600 hover:underline font-medium">
+                Sign In
               </Link>
             </div>
           </form>

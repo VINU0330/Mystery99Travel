@@ -32,17 +32,10 @@ export default function ServiceSelection() {
           strokeLinejoin="round"
           className="w-6 h-6"
         >
-          <path d="M12 2v2"></path>
-          <path d="M12 8v2"></path>
-          <path d="M12 14v2"></path>
-          <path d="M12 20v2"></path>
-          <path d="M6 4l1.5 1.5"></path>
-          <path d="M16.5 5.5 18 4"></path>
-          <path d="M4 6l1.5 1.5"></path>
-          <path d="M18 6l-1.5 1.5"></path>
-          <path d="M8 17a4 4 0 0 1-4-4"></path>
-          <path d="M16 13a4 4 0 0 1 4 4"></path>
-          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M8 22h8"></path>
+          <path d="M7 10h10"></path>
+          <path d="M12 10v12"></path>
+          <path d="M18 2H6a2 2 0 0 0-2 2v6c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Z"></path>
         </svg>
       ),
     },
@@ -92,10 +85,10 @@ export default function ServiceSelection() {
           strokeLinejoin="round"
           className="w-6 h-6"
         >
-          <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path>
-          <circle cx="7" cy="17" r="2"></circle>
-          <path d="M9 17h6"></path>
-          <circle cx="17" cy="17" r="2"></circle>
+          <path d="M10 17h4V5H2v12h3"></path>
+          <path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"></path>
+          <circle cx="7.5" cy="17.5" r="2.5"></circle>
+          <circle cx="17.5" cy="17.5" r="2.5"></circle>
         </svg>
       ),
     },
