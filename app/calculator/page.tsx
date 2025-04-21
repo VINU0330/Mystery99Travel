@@ -1,10 +1,13 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { CardContainer } from "@/components/ui/card-container"
+import { motion } from "framer-motion"
 import {
   formatTime,
   formatTimeFromComponents,
@@ -12,11 +15,10 @@ import {
   calculateDayTimeServicePayment,
   calculateVehicleDeliveryPayment,
 } from "@/lib/utils"
-import { useRouter } from "next/navigation"
-import AppLayout from "@/components/app-layout"
 
 export default function RideCalculator() {
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   // Service type
   const [serviceType, setServiceType] = useState("drink-and-drive")
@@ -61,13 +63,19 @@ export default function RideCalculator() {
   // Timer reference
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Load service type from localStorage on component mount
+  // Load service type from URL or localStorage on component mount
   useEffect(() => {
-    const savedServiceType = localStorage.getItem("selectedService")
-    if (savedServiceType) {
-      setServiceType(savedServiceType)
+    const serviceFromUrl = searchParams.get("service")
+    if (serviceFromUrl) {
+      setServiceType(serviceFromUrl)
+      localStorage.setItem("selectedService", serviceFromUrl)
+    } else {
+      const savedServiceType = localStorage.getItem("selectedService")
+      if (savedServiceType) {
+        setServiceType(savedServiceType)
+      }
     }
-  }, [])
+  }, [searchParams])
 
   // Update trip duration when manual inputs change
   useEffect(() => {
@@ -292,7 +300,7 @@ export default function RideCalculator() {
         <div className="grid grid-cols-3 gap-2">
           <div>
             <label className="text-xs font-medium">Hours</label>
-            <Input type="number" min="0" value={hours} onChange={(e) => setHours(e.target.value)} className="h-8" />
+            <Input type="number" min="0" value={hours} onChange={(e) => setHours(e.target.value)} className="h-10" />
           </div>
           <div>
             <label className="text-xs font-medium">Minutes</label>
@@ -302,7 +310,7 @@ export default function RideCalculator() {
               max="59"
               value={minutes}
               onChange={(e) => setMinutes(e.target.value)}
-              className="h-8"
+              className="h-10"
             />
           </div>
           <div>
@@ -313,13 +321,33 @@ export default function RideCalculator() {
               max="59"
               value={seconds}
               onChange={(e) => setSeconds(e.target.value)}
-              className="h-8"
+              className="h-10"
             />
           </div>
         </div>
       )
     } else {
-      return <div className="h-10 px-3 py-2 border rounded-md bg-gray-50">{tripDuration}</div>
+      return (
+        <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center justify-center font-mono">
+          {tripDuration}
+        </div>
+      )
+    }
+  }
+
+  // Get step title
+  const getStepTitle = () => {
+    switch (step) {
+      case 0:
+        return "Pickup Details"
+      case 1:
+        return "Drop-off Details"
+      case 2:
+        return "Customer Payment"
+      case 3:
+        return "Rider Payment"
+      default:
+        return "Ride Details"
     }
   }
 
@@ -328,287 +356,328 @@ export default function RideCalculator() {
     switch (step) {
       case 0:
         return (
-          <div className="space-y-6">
-            <p className="text-sm text-center text-gray-500">Calculate the Payment for {getServiceTitle()}</p>
-
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Pickup Location</label>
-                <Input
-                  value={pickupLocation}
-                  onChange={(e) => setPickupLocation(e.target.value)}
-                  placeholder="Enter pickup location"
-                />
-              </div>
-
-              {(serviceType === "drink-and-drive" || serviceType === "day-time") && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            <CardContainer>
+              <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">Trip Area</label>
-                  <Select value={pickupArea} onValueChange={setPickupArea}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="colombo">Colombo Area</SelectItem>
-                      <SelectItem value="out-colombo">Out of Colombo Area</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Pickup Time</label>
-                  <div className="h-10 px-3 py-2 border rounded-md bg-gray-50">{pickupTime || "00:00:00"}</div>
-                </div>
-                <div>
-                  <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium">Trip Duration</label>
-                    <Button variant="ghost" size="sm" onClick={toggleManualTime} className="h-6 text-xs px-2">
-                      {isManualTime ? "Auto" : "Manual"}
-                    </Button>
-                  </div>
-                  {renderTripDurationInput()}
-                </div>
-              </div>
-
-              <Button className="w-full bg-indigo-100 text-indigo-800 hover:bg-indigo-200" onClick={handleMarkAsPickup}>
-                Mark As Picked
-              </Button>
-
-              {(serviceType === "drink-and-drive" || serviceType === "vehicle-delivery") && (
-                <div>
-                  <label className="text-sm font-medium">Start Meter Count</label>
+                  <label className="text-sm font-medium">Pickup Location</label>
                   <Input
-                    type="number"
-                    value={startMeterCount}
-                    onChange={(e) => setStartMeterCount(e.target.value)}
-                    placeholder="Enter start meter reading"
+                    value={pickupLocation}
+                    onChange={(e) => setPickupLocation(e.target.value)}
+                    placeholder="Enter pickup location"
+                    className="h-10"
                   />
                 </div>
-              )}
 
-              <Button
-                className="w-full bg-green-100 text-green-800 hover:bg-green-200"
-                onClick={handleStartTrip}
-                disabled={
-                  !pickupLocation ||
-                  (serviceType !== "vehicle-delivery" && !pickupArea) ||
-                  (serviceType !== "day-time" && !startMeterCount) ||
-                  !pickupTime
-                }
-              >
-                Start Trip
-              </Button>
-            </div>
-          </div>
+                {(serviceType === "drink-and-drive" || serviceType === "day-time") && (
+                  <div>
+                    <label className="text-sm font-medium">Trip Area</label>
+                    <Select value={pickupArea} onValueChange={setPickupArea}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Select area" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="colombo">Colombo Area</SelectItem>
+                        <SelectItem value="out-colombo">Out of Colombo Area</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Pickup Time</label>
+                    <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center justify-center font-mono">
+                      {pickupTime || "00:00:00"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm font-medium">Trip Duration</label>
+                      <Button variant="ghost" size="sm" onClick={toggleManualTime} className="h-6 text-xs px-2">
+                        {isManualTime ? "Auto" : "Manual"}
+                      </Button>
+                    </div>
+                    {renderTripDurationInput()}
+                  </div>
+                </div>
+
+                <Button className="w-full bg-primary-600 hover:bg-primary-700 text-white" onClick={handleMarkAsPickup}>
+                  Mark As Picked
+                </Button>
+
+                {(serviceType === "drink-and-drive" || serviceType === "vehicle-delivery") && (
+                  <div>
+                    <label className="text-sm font-medium">Start Meter Count</label>
+                    <Input
+                      type="number"
+                      value={startMeterCount}
+                      onChange={(e) => setStartMeterCount(e.target.value)}
+                      placeholder="Enter start meter reading"
+                      className="h-10"
+                    />
+                  </div>
+                )}
+              </div>
+            </CardContainer>
+
+            <Button
+              className="w-full h-12 bg-green-600 hover:bg-green-700 text-white"
+              onClick={handleStartTrip}
+              disabled={
+                !pickupLocation ||
+                (serviceType !== "vehicle-delivery" && !pickupArea) ||
+                (serviceType !== "day-time" && !startMeterCount) ||
+                !pickupTime
+              }
+            >
+              Start Trip
+            </Button>
+          </motion.div>
         )
 
       case 1:
         return (
-          <div className="space-y-6">
-            <p className="text-sm text-center text-gray-500">Calculate the Payment for {getServiceTitle()}</p>
-
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Drop Location</label>
-                <Input
-                  value={dropLocation}
-                  onChange={(e) => setDropLocation(e.target.value)}
-                  placeholder="Enter drop location"
-                />
-              </div>
-
-              {serviceType === "vehicle-delivery" ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            <CardContainer>
+              <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">End Location Area</label>
-                  <Select value={endLocationArea} onValueChange={setEndLocationArea}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="colombo-1-5">Colombo 1 to 5</SelectItem>
-                      <SelectItem value="colombo-area">Colombo Area</SelectItem>
-                      <SelectItem value="western-province">Western Province</SelectItem>
-                      <SelectItem value="island-wide">Island Wide</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <div>
-                  <label className="text-sm font-medium">Trip Area</label>
-                  <Select value={dropArea} onValueChange={setDropArea}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="colombo">Colombo Area</SelectItem>
-                      <SelectItem value="out-colombo">Out of Colombo Area</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Pickup Time</label>
-                  <div className="h-10 px-3 py-2 border rounded-md bg-gray-50">{pickupTime}</div>
-                </div>
-                <div>
-                  <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium">Trip Duration</label>
-                    <Button variant="ghost" size="sm" onClick={toggleManualTime} className="h-6 text-xs px-2">
-                      {isManualTime ? "Auto" : "Manual"}
-                    </Button>
-                  </div>
-                  {renderTripDurationInput()}
-                </div>
-              </div>
-
-              <Button
-                className="w-full bg-indigo-100 text-indigo-800 hover:bg-indigo-200"
-                onClick={handleMarkAsDropped}
-              >
-                Mark As Dropped
-              </Button>
-
-              {(serviceType === "drink-and-drive" || serviceType === "vehicle-delivery") && (
-                <div>
-                  <label className="text-sm font-medium">End Meter Count</label>
+                  <label className="text-sm font-medium">Drop Location</label>
                   <Input
-                    type="number"
-                    value={endMeterCount}
-                    onChange={(e) => setEndMeterCount(e.target.value)}
-                    placeholder="Enter end meter reading"
+                    value={dropLocation}
+                    onChange={(e) => setDropLocation(e.target.value)}
+                    placeholder="Enter drop location"
+                    className="h-10"
                   />
                 </div>
-              )}
 
-              <Button
-                className="w-full bg-red-100 text-red-800 hover:bg-red-200"
-                onClick={handleEndTrip}
-                disabled={
-                  !dropLocation ||
-                  (serviceType === "vehicle-delivery" ? !endLocationArea : !dropArea) ||
-                  (serviceType !== "day-time" && !endMeterCount)
-                }
-              >
-                End Trip
-              </Button>
-            </div>
-          </div>
+                {serviceType === "vehicle-delivery" ? (
+                  <div>
+                    <label className="text-sm font-medium">End Location Area</label>
+                    <Select value={endLocationArea} onValueChange={setEndLocationArea}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Select area" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="colombo-1-5">Colombo 1 to 5</SelectItem>
+                        <SelectItem value="colombo-area">Colombo Area</SelectItem>
+                        <SelectItem value="western-province">Western Province</SelectItem>
+                        <SelectItem value="island-wide">Island Wide</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-sm font-medium">Trip Area</label>
+                    <Select value={dropArea} onValueChange={setDropArea}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Select area" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="colombo">Colombo Area</SelectItem>
+                        <SelectItem value="out-colombo">Out of Colombo Area</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Pickup Time</label>
+                    <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center justify-center font-mono">
+                      {pickupTime}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm font-medium">Trip Duration</label>
+                      <Button variant="ghost" size="sm" onClick={toggleManualTime} className="h-6 text-xs px-2">
+                        {isManualTime ? "Auto" : "Manual"}
+                      </Button>
+                    </div>
+                    {renderTripDurationInput()}
+                  </div>
+                </div>
+
+                <Button className="w-full bg-primary-600 hover:bg-primary-700 text-white" onClick={handleMarkAsDropped}>
+                  Mark As Dropped
+                </Button>
+
+                {(serviceType === "drink-and-drive" || serviceType === "vehicle-delivery") && (
+                  <div>
+                    <label className="text-sm font-medium">End Meter Count</label>
+                    <Input
+                      type="number"
+                      value={endMeterCount}
+                      onChange={(e) => setEndMeterCount(e.target.value)}
+                      placeholder="Enter end meter reading"
+                      className="h-10"
+                    />
+                  </div>
+                )}
+              </div>
+            </CardContainer>
+
+            <Button
+              className="w-full h-12 bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleEndTrip}
+              disabled={
+                !dropLocation ||
+                (serviceType === "vehicle-delivery" ? !endLocationArea : !dropArea) ||
+                (serviceType !== "day-time" && !endMeterCount)
+              }
+            >
+              End Trip
+            </Button>
+          </motion.div>
         )
 
       case 2:
         return (
-          <div className="space-y-6">
-            <p className="text-sm text-center text-gray-500">Calculate the Payment for {getServiceTitle()}</p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            <CardContainer className="bg-white">
+              <h3 className="text-lg font-medium mb-4">Trip Summary</h3>
 
-            <div className="border rounded-lg p-4 space-y-4">
-              <h2 className="text-base font-medium">Customer Payment</h2>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  {(serviceType === "drink-and-drive" || serviceType === "vehicle-delivery") && (
+                    <>
+                      <div className="font-medium">Total Trip Distance</div>
+                      <div className="text-right">{totalDistance.toFixed(2)} KM</div>
+                    </>
+                  )}
 
-              <div className="grid grid-cols-2 gap-2">
-                {(serviceType === "drink-and-drive" || serviceType === "vehicle-delivery") && (
-                  <>
-                    <div className="text-sm">Total Trip Distance (KM)</div>
-                    <div className="text-sm text-right">{totalDistance.toFixed(2)}</div>
-                  </>
-                )}
+                  <div className="font-medium">Total Trip Time</div>
+                  <div className="text-right font-mono text-primary-600">{finalTripDuration}</div>
 
-                <div className="text-sm">Total Trip Time</div>
-                <div className="text-sm text-right text-red-500">{finalTripDuration}</div>
+                  <div className="font-medium">Pickup Location</div>
+                  <div className="text-right">{pickupLocation}</div>
+
+                  <div className="font-medium">Drop Location</div>
+                  <div className="text-right">{dropLocation}</div>
+                </div>
+
+                <div className="bg-primary-50 rounded-lg p-4 text-center mt-4">
+                  <div className="text-sm font-medium text-gray-600">Full Payment Amount</div>
+                  <div className="text-3xl font-bold text-primary-600">Rs.{totalPayment.toLocaleString()}</div>
+                </div>
               </div>
+            </CardContainer>
 
-              <div className="bg-red-100 rounded-lg p-4 text-center">
-                <div className="text-sm font-medium">Full Payment Amount</div>
-                <div className="text-2xl font-bold text-red-600">Rs.{totalPayment.toFixed(2)}</div>
-              </div>
-            </div>
+            <CardContainer>
+              <h3 className="text-lg font-medium mb-4">Customer Details</h3>
 
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Customer Name</label>
-                <Input
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Enter customer name"
-                />
-              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Customer Name</label>
+                  <Input
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Enter customer name"
+                    className="h-10"
+                  />
+                </div>
 
-              <div>
-                <label className="text-sm font-medium">Phone Number</label>
-                <Input
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="Enter phone number"
-                />
-              </div>
+                <div>
+                  <label className="text-sm font-medium">Phone Number</label>
+                  <Input
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="Enter phone number"
+                    className="h-10"
+                  />
+                </div>
 
-              <div>
-                <label className="text-sm font-medium">Payment</label>
-                <div className="flex items-center space-x-4 mt-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="cash"
-                      checked={paymentMethod === "cash"}
-                      onCheckedChange={() => setPaymentMethod("cash")}
-                    />
-                    <label htmlFor="cash" className="text-sm">
-                      Cash Payment
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="credit"
-                      checked={paymentMethod === "credit"}
-                      onCheckedChange={() => setPaymentMethod("credit")}
-                    />
-                    <label htmlFor="credit" className="text-sm">
-                      Credit Payment
-                    </label>
+                <div>
+                  <label className="text-sm font-medium block mb-2">Payment Method</label>
+                  <div className="flex items-center space-x-6">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="cash"
+                        checked={paymentMethod === "cash"}
+                        onCheckedChange={() => setPaymentMethod("cash")}
+                      />
+                      <label htmlFor="cash" className="text-sm cursor-pointer">
+                        Cash Payment
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="credit"
+                        checked={paymentMethod === "credit"}
+                        onCheckedChange={() => setPaymentMethod("credit")}
+                      />
+                      <label htmlFor="credit" className="text-sm cursor-pointer">
+                        Credit Payment
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
+            </CardContainer>
 
-              <Button className="w-full bg-red-600 text-white hover:bg-red-700" onClick={handleFinalEndTrip}>
-                End Trip
-              </Button>
-            </div>
-          </div>
+            <Button className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleFinalEndTrip}>
+              End Trip
+            </Button>
+          </motion.div>
         )
 
       case 3:
         return (
-          <div className="space-y-6">
-            <p className="text-sm text-center text-gray-500">Calculate the Payment for {getServiceTitle()}</p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            <CardContainer className="bg-white">
+              <h3 className="text-lg font-medium mb-4">Payment Summary</h3>
 
-            <div className="border rounded-lg p-4 space-y-4">
-              <h2 className="text-base font-medium">Driver Payment</h2>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="font-medium">Total Payment</div>
+                  <div className="text-right">Rs.{totalPayment.toLocaleString()}</div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div className="text-sm">Trip Total Payment</div>
-                <div className="text-sm text-right text-red-500">Rs.{totalPayment.toFixed(2)}</div>
+                  <div className="font-medium">Company Commission (20%)</div>
+                  <div className="text-right">Rs.{companyCommission.toLocaleString()}</div>
 
-                <div className="text-sm">Company Commission</div>
-                <div className="text-sm text-right">Rs.{companyCommission.toFixed(2)}</div>
+                  <div className="font-medium">Driver Payment (80%)</div>
+                  <div className="text-right">Rs.{driverPayment.toLocaleString()}</div>
+                </div>
               </div>
+            </CardContainer>
 
-              <div className="bg-red-100 rounded-lg p-4 text-center">
-                <div className="text-sm font-medium">Payment Amount</div>
-                <div className="text-2xl font-bold text-red-600">Rs.{driverPayment.toFixed(2)}</div>
-              </div>
-            </div>
-
-            <Button className="w-full bg-green-100 text-green-800 hover:bg-green-200" onClick={handleRideAgain}>
+            <Button className="w-full h-12 bg-green-600 hover:bg-green-700 text-white" onClick={handleRideAgain}>
               Ride Again
             </Button>
-          </div>
+          </motion.div>
         )
 
       default:
-        return null
+        return <div>Select a service to begin.</div>
     }
   }
 
-  return <AppLayout title="Rider Payment Calculator">{renderStep()}</AppLayout>
+  return (
+    <div className="container py-10">
+      <h1 className="text-2xl font-bold mb-6">{getServiceTitle()}</h1>
+      <h2 className="text-xl font-semibold mb-4">{getStepTitle()}</h2>
+      {renderStep()}
+    </div>
+  )
 }
