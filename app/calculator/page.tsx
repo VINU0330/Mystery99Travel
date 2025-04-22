@@ -16,6 +16,10 @@ import {
   calculateVehicleDeliveryPayment,
 } from "@/lib/utils"
 
+// Import the necessary functions and hooks
+import { useAuth } from "@/contexts/auth-context"
+import { saveTrip } from "@/services/trip-service"
+
 export default function RideCalculator() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -56,6 +60,10 @@ export default function RideCalculator() {
 
   // Timer reference
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Add loading state for saving
+  const [isSaving, setIsSaving] = useState(false)
+  const { currentUser } = useAuth()
 
   // Load service type from URL or localStorage on component mount
   useEffect(() => {
@@ -161,9 +169,46 @@ export default function RideCalculator() {
     }
   }
 
-  // Handle final end trip
-  const handleFinalEndTrip = () => {
-    setStep(3)
+  // Replace the handleFinalEndTrip function with this:
+  const handleFinalEndTrip = async () => {
+    if (!currentUser) {
+      alert("You must be logged in to save trip data.")
+      return
+    }
+
+    setIsSaving(true)
+
+    try {
+      // Save trip data to Firestore
+      await saveTrip({
+        userId: currentUser.uid,
+        serviceType,
+        pickupLocation,
+        dropLocation,
+        pickupArea: serviceType !== "vehicle-delivery" ? pickupArea : undefined,
+        dropArea: serviceType !== "vehicle-delivery" ? dropArea : undefined,
+        endLocationArea: serviceType === "vehicle-delivery" ? endLocationArea : undefined,
+        startMeterCount: startMeterCount ? Number.parseFloat(startMeterCount) : undefined,
+        endMeterCount: endMeterCount ? Number.parseFloat(endMeterCount) : undefined,
+        distance: totalDistance,
+        tripDuration: finalTripDuration,
+        elapsedTime: finalElapsedTime,
+        totalPayment,
+        companyCommission,
+        driverPayment,
+        customerName,
+        phoneNumber,
+        paymentMethod,
+        status: paymentMethod === "cash" ? "completed" : "pending",
+      })
+
+      setStep(3)
+    } catch (error) {
+      console.error("Error saving trip:", error)
+      alert("Failed to save trip data. Please try again.")
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // Reset and start a new ride
@@ -511,8 +556,12 @@ export default function RideCalculator() {
               </div>
             </CardContainer>
 
-            <Button className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleFinalEndTrip}>
-              End Trip
+            <Button
+              className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={handleFinalEndTrip}
+              disabled={isSaving}
+            >
+              {isSaving ? "Saving..." : "End Trip"}
             </Button>
           </motion.div>
         )

@@ -12,25 +12,33 @@ import Link from "next/link"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 
-export default function Login() {
+export default function Signup() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
-  const { login, isUsingLocalAuth } = useAuth()
+  const { signup, isUsingLocalAuth } = useAuth()
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      setError("Passwords do not match")
+      return
+    }
+
     setIsLoading(true)
 
     try {
-      await login(email, password)
+      await signup(email, password)
       router.push("/service-selection")
     } catch (error) {
-      console.error("Login error:", error)
-      setError("Failed to sign in. Please check your credentials.")
+      console.error("Signup error:", error)
+      setError("Failed to create an account. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -47,8 +55,8 @@ export default function Login() {
         <CardContainer>
           <div className="flex flex-col items-center mb-8">
             <img src="/logo.png" alt="Mystery 99 Travels & Tours" className="h-24 md:h-32 mb-4" />
-            <h1 className="text-2xl font-bold text-gray-800">Welcome Back</h1>
-            <p className="text-gray-500 mt-1">Sign in to your account</p>
+            <h1 className="text-2xl font-bold text-gray-800">Create Account</h1>
+            <p className="text-gray-500 mt-1">Sign up to get started</p>
           </div>
 
           {isUsingLocalAuth && (
@@ -65,7 +73,7 @@ export default function Login() {
             </Alert>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleSignup} className="space-y-5">
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium text-gray-700">
                 Email
@@ -82,20 +90,30 @@ export default function Login() {
             </div>
 
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label htmlFor="password" className="text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <Link href="/forgot-password" className="text-xs text-primary-600 hover:underline">
-                  Forgot Password?
-                </Link>
-              </div>
+              <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                Password
+              </label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder="Create a password"
+                required
+                className="h-11"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
+                Confirm Password
+              </label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm your password"
                 required
                 className="h-11"
               />
@@ -106,13 +124,13 @@ export default function Login() {
               className="w-full h-11 bg-primary-600 hover:bg-primary-700 text-white"
               disabled={isLoading}
             >
-              {isLoading ? "Signing in..." : "Sign In"}
+              {isLoading ? "Creating Account..." : "Create Account"}
             </Button>
 
             <div className="text-center text-sm">
-              <span className="text-gray-600">New to Mystery99?</span>{" "}
-              <Link href="/signup" className="text-primary-600 hover:underline font-medium">
-                Create an account
+              <span className="text-gray-600">Already have an account?</span>{" "}
+              <Link href="/" className="text-primary-600 hover:underline font-medium">
+                Sign In
               </Link>
             </div>
           </form>
