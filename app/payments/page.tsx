@@ -8,6 +8,8 @@ import { motion } from "framer-motion"
 import { useAuth } from "@/contexts/auth-context"
 import { getUserTrips, formatTripForDisplay } from "@/services/trip-service"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
 
 interface PaymentRecord {
   tripId: string
@@ -26,7 +28,8 @@ export default function Payments() {
   const [pendingPayments, setPendingPayments] = useState(0)
   const [activeTab, setActiveTab] = useState("all")
   const [isLoading, setIsLoading] = useState(true)
-  const { currentUser } = useAuth()
+  const [error, setError] = useState<string | null>(null)
+  const { currentUser, isUsingLocalAuth } = useAuth()
 
   useEffect(() => {
     const fetchPayments = async () => {
@@ -34,6 +37,7 @@ export default function Payments() {
 
       try {
         setIsLoading(true)
+        setError(null)
         const trips = await getUserTrips(currentUser.uid)
 
         // Format trips for display
@@ -54,6 +58,7 @@ export default function Payments() {
         setPendingPayments(pending)
       } catch (error) {
         console.error("Error fetching payments:", error)
+        setError("Failed to load payment data. Please try again later.")
       } finally {
         setIsLoading(false)
       }
@@ -96,6 +101,20 @@ export default function Payments() {
   return (
     <MainLayout title="Payments">
       <div className="space-y-6">
+        {isUsingLocalAuth && (
+          <Alert className="bg-blue-50 border-blue-200 text-blue-800">
+            <AlertCircle className="h-4 w-4 mr-2" />
+            <AlertDescription>Using local authentication mode. Your data is stored locally.</AlertDescription>
+          </Alert>
+        )}
+
+        {error && (
+          <Alert className="bg-red-50 border-red-200 text-red-700" variant="destructive">
+            <AlertCircle className="h-4 w-4 mr-2" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         {isLoading ? (
           renderSkeletons()
         ) : (
@@ -203,64 +222,70 @@ export default function Payments() {
                 </div>
 
                 <TabsContent value={activeTab} className="mt-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Trip ID
-                          </th>
-                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Date
-                          </th>
-                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Service
-                          </th>
-                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Total
-                          </th>
-                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Commission
-                          </th>
-                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Rider
-                          </th>
-                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Status
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {filteredRecords.map((record, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="py-3 px-4 whitespace-nowrap text-sm">{record.tripId}</td>
-                            <td className="py-3 px-4 whitespace-nowrap text-sm">{record.date}</td>
-                            <td className="py-3 px-4 whitespace-nowrap text-sm">{record.service}</td>
-                            <td className="py-3 px-4 whitespace-nowrap text-sm">
-                              Rs.{record.totalPayment.toLocaleString()}
-                            </td>
-                            <td className="py-3 px-4 whitespace-nowrap text-sm">
-                              Rs.{record.commission.toLocaleString()}
-                            </td>
-                            <td className="py-3 px-4 whitespace-nowrap text-sm font-medium text-green-600">
-                              Rs.{record.riderPayment.toLocaleString()}
-                            </td>
-                            <td className="py-3 px-4 whitespace-nowrap text-sm">
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  record.status === "completed"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-amber-100 text-amber-800"
-                                }`}
-                              >
-                                {record.status === "completed" ? "Completed" : "Pending"}
-                              </span>
-                            </td>
+                  {filteredRecords.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      No payment records found. Complete a trip to see payment history.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Trip ID
+                            </th>
+                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Date
+                            </th>
+                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Service
+                            </th>
+                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Total
+                            </th>
+                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Commission
+                            </th>
+                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Rider
+                            </th>
+                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {filteredRecords.map((record, index) => (
+                            <tr key={index} className="hover:bg-gray-50">
+                              <td className="py-3 px-4 whitespace-nowrap text-sm">{record.tripId}</td>
+                              <td className="py-3 px-4 whitespace-nowrap text-sm">{record.date}</td>
+                              <td className="py-3 px-4 whitespace-nowrap text-sm">{record.service}</td>
+                              <td className="py-3 px-4 whitespace-nowrap text-sm">
+                                Rs.{record.totalPayment.toLocaleString()}
+                              </td>
+                              <td className="py-3 px-4 whitespace-nowrap text-sm">
+                                Rs.{record.commission.toLocaleString()}
+                              </td>
+                              <td className="py-3 px-4 whitespace-nowrap text-sm font-medium text-green-600">
+                                Rs.{record.riderPayment.toLocaleString()}
+                              </td>
+                              <td className="py-3 px-4 whitespace-nowrap text-sm">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    record.status === "completed"
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-amber-100 text-amber-800"
+                                  }`}
+                                >
+                                  {record.status === "completed" ? "Completed" : "Pending"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </CardContainer>

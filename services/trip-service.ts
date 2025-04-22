@@ -87,21 +87,45 @@ export const getUserTrips = async (userId: string) => {
         .filter((trip: any) => trip.userId === userId)
         .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     } else {
-      // Firestore
-      const q = query(collection(db, "trips"), where("userId", "==", userId), orderBy("createdAt", "desc"))
+      // Firestore - Modified to avoid composite index requirement
+      try {
+        // First attempt: Try with the composite index if it exists
+        const q = query(collection(db, "trips"), where("userId", "==", userId), orderBy("createdAt", "desc"))
+        const querySnapshot = await getDocs(q)
+        const trips: Array<TripData & { id: string }> = []
 
-      const querySnapshot = await getDocs(q)
-      const trips: Array<TripData & { id: string }> = []
-
-      querySnapshot.forEach((doc) => {
-        const data = doc.data() as TripData
-        trips.push({
-          ...data,
-          id: doc.id,
+        querySnapshot.forEach((doc) => {
+          const data = doc.data() as TripData
+          trips.push({
+            ...data,
+            id: doc.id,
+          })
         })
-      })
 
-      return trips
+        return trips
+      } catch (indexError) {
+        console.log("Index error, falling back to client-side sorting:", indexError)
+
+        // Second attempt: Just filter by userId without ordering (no index needed)
+        const q = query(collection(db, "trips"), where("userId", "==", userId))
+        const querySnapshot = await getDocs(q)
+        const trips: Array<TripData & { id: string }> = []
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data() as TripData
+          trips.push({
+            ...data,
+            id: doc.id,
+          })
+        })
+
+        // Sort on the client side instead
+        return trips.sort((a, b) => {
+          const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : a.createdAt.toDate().getTime()
+          const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : b.createdAt.toDate().getTime()
+          return dateB - dateA // descending order
+        })
+      }
     }
   } catch (error) {
     console.error("Error getting trips:", error)
