@@ -23,12 +23,32 @@ const firebaseConfig = {
 }
 
 // Initialize Firebase (only if it hasn't been initialized already)
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
+let app
+try {
+  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
+} catch (error) {
+  console.error("Error initializing Firebase:", error)
+  // Create a dummy app for fallback
+  app = {} as any
+}
 
 // Initialize Firebase Authentication and get a reference to the service
-export const auth = getAuth(app)
+let auth
+try {
+  auth = getAuth(app)
+} catch (error) {
+  console.error("Error initializing Firebase Auth:", error)
+  auth = {} as any
+}
 
 // Initialize Cloud Firestore and get a reference to the service
-export const db = getFirestore(app)
+let db
+try {
+  db = getFirestore(app)
+} catch (error) {
+  console.error("Error initializing Firestore:", error)
+  db = {} as any
+}
 
+export { auth, db }
 export default app

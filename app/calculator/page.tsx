@@ -179,27 +179,56 @@ export default function RideCalculator() {
     setIsSaving(true)
 
     try {
-      // Save trip data to Firestore
-      await saveTrip({
+      // Create a base trip data object with required fields
+      const tripData = {
         userId: currentUser.uid,
         serviceType,
         pickupLocation,
         dropLocation,
-        pickupArea: serviceType !== "vehicle-delivery" ? pickupArea : undefined,
-        dropArea: serviceType !== "vehicle-delivery" ? dropArea : undefined,
-        endLocationArea: serviceType === "vehicle-delivery" ? endLocationArea : undefined,
-        startMeterCount: startMeterCount ? Number.parseFloat(startMeterCount) : undefined,
-        endMeterCount: endMeterCount ? Number.parseFloat(endMeterCount) : undefined,
-        distance: totalDistance,
         tripDuration: finalTripDuration,
         elapsedTime: finalElapsedTime,
         totalPayment,
         companyCommission,
         driverPayment,
-        customerName,
-        phoneNumber,
         paymentMethod,
         status: paymentMethod === "cash" ? "completed" : "pending",
+      }
+
+      // Add conditional fields based on service type
+      const additionalData: Record<string, any> = {}
+
+      // Add service-specific fields
+      if (serviceType !== "vehicle-delivery") {
+        if (pickupArea) additionalData.pickupArea = pickupArea
+        if (dropArea) additionalData.dropArea = dropArea
+      }
+
+      if (serviceType === "vehicle-delivery") {
+        if (endLocationArea) additionalData.endLocationArea = endLocationArea
+      }
+
+      // Add meter readings if they exist and are valid
+      if (startMeterCount && !isNaN(Number.parseFloat(startMeterCount))) {
+        additionalData.startMeterCount = Number.parseFloat(startMeterCount)
+      }
+
+      if (endMeterCount && !isNaN(Number.parseFloat(endMeterCount))) {
+        additionalData.endMeterCount = Number.parseFloat(endMeterCount)
+      }
+
+      // Add distance if calculated
+      if (totalDistance > 0) {
+        additionalData.distance = totalDistance
+      }
+
+      // Add customer details if provided
+      if (customerName) additionalData.customerName = customerName
+      if (phoneNumber) additionalData.phoneNumber = phoneNumber
+
+      // Save trip data to Firestore
+      await saveTrip({
+        ...tripData,
+        ...additionalData,
       })
 
       setStep(3)
