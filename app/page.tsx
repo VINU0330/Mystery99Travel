@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/auth-context"
 import Link from "next/link"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
+import { FirebaseError } from "firebase/app"
 
 export default function Login() {
   const [email, setEmail] = useState("")
@@ -30,7 +31,28 @@ export default function Login() {
       router.push("/service-selection")
     } catch (error) {
       console.error("Login error:", error)
-      setError("Failed to sign in. Please check your credentials.")
+
+      // Handle Firebase specific errors
+      if (error instanceof FirebaseError) {
+        switch (error.code) {
+          case "auth/user-not-found":
+            setError("No account found with this email. Please sign up.")
+            break
+          case "auth/wrong-password":
+            setError("Incorrect password. Please try again.")
+            break
+          case "auth/invalid-email":
+            setError("Please enter a valid email address.")
+            break
+          case "auth/too-many-requests":
+            setError("Too many failed login attempts. Please try again later.")
+            break
+          default:
+            setError(`Failed to sign in: ${error.message}`)
+        }
+      } else {
+        setError("Failed to sign in. Please check your credentials.")
+      }
     } finally {
       setIsLoading(false)
     }
