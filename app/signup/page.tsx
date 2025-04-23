@@ -1,181 +1,119 @@
-"use client"
+"use client"  
 
-import type React from "react"
-import { useState } from "react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
-import { CardContainer } from "@/components/ui/card-container"
-import { motion } from "framer-motion"
-import { useAuth } from "@/contexts/auth-context"
-import Link from "next/link"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
-import { FirebaseError } from "firebase/app"
+import React, { createContext, useContext, useState } from "react";  
+import { useRouter } from "next/navigation";  
+import { Input } from "@/components/ui/input"; // Adjust based on your actual UI library  
+import { Button } from "@/components/ui/button"; // Adjust based on your actual UI library  
+import { CardContainer } from "@/components/ui/card-container"; // Adjust based on your actual UI library  
+import { Alert, AlertDescription } from "@/components/ui/alert"; // Adjust based on your actual UI library  
+import Link from "next/link";  
+import { motion } from "framer-motion";  
 
-export default function Signup() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [isExistingAccount, setIsExistingAccount] = useState(false)
-  const router = useRouter()
-  const { signup, isUsingLocalAuth } = useAuth()
+// Create the Auth Context  
+const AuthContext = createContext();  
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setIsExistingAccount(false)
+// Auth Provider Component  
+export const AuthProvider = ({ children }) => {  
+    const [user, setUser] = useState(null); // Holds the user data (if authenticated)  
 
-    // Validate passwords match
-    if (password !== confirmPassword) {
-      setError("Passwords do not match")
-      return
-    }
+    // Simulated sign-in function  
+    const signIn = async (email, password) => {  
+        // Normally, you'd call an API here to authenticate the user.  
+        // This is just a mockup.  
+        if (email === "user@example.com" && password === "password") {  
+            setUser({ email }); // Set user if credentials are correct  
+        } else {  
+            throw new Error("Invalid email or password"); // Throw error on failure  
+        }  
+    };  
 
-    // Validate password strength
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long")
-      return
-    }
+    const signOut = () => {  
+        setUser(null); // Clear user on sign out  
+    };  
 
-    setIsLoading(true)
+    return (  
+        <AuthContext.Provider value={{ user, signIn, signOut }}>  
+            {children}  
+        </AuthContext.Provider>  
+    );  
+};  
 
-    try {
-      await signup(email, password)
-      router.push("/service-selection")
-    } catch (error) {
-      console.error("Signup error:", error)
+// Custom hook to use the Auth Context  
+export const useAuth = () => {  
+    return useContext(AuthContext);  
+};  
 
-      // Handle Firebase specific errors
-      if (error instanceof FirebaseError) {
-        switch (error.code) {
-          case "auth/email-already-in-use":
-            setIsExistingAccount(true)
-            setError("An account with this email already exists.")
-            break
-          case "auth/invalid-email":
-            setError("Please enter a valid email address.")
-            break
-          case "auth/weak-password":
-            setError("Password is too weak. Please choose a stronger password.")
-            break
-          default:
-            setError(`Failed to create an account: ${error.message}`)
-        }
-      } else {
-        setError("Failed to create an account. Please try again.")
-      }
-    } finally {
-      setIsLoading(false)
-    }
-  }
+// SignInForm Component  
+const SignInForm = () => {  
+    const [email, setEmail] = useState("");  
+    const [password, setPassword] = useState("");  
+    const [isLoading, setIsLoading] = useState(false);  
+    const [error, setError] = useState(null);  
+    const router = useRouter();  
+    const { signIn } = useAuth(); // Using the auth context  
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
-        <CardContainer>
-          <div className="flex flex-col items-center mb-8">
-            <img src="/logo.png" alt="Mystery 99 Travels & Tours" className="h-24 md:h-32 mb-4" />
-            <h1 className="text-2xl font-bold text-gray-800">Create Account</h1>
-            <p className="text-gray-500 mt-1">Sign up to get started</p>
-          </div>
+    const handleSubmit = async (e) => {  
+        e.preventDefault();  
+        setIsLoading(true);  
+        setError(null);  
 
-          {isUsingLocalAuth && (
-            <Alert className="mb-4 bg-blue-50 border-blue-200 text-blue-800">
-              <AlertCircle className="h-4 w-4 mr-2" />
-              <AlertDescription>Using local authentication mode. Your data will be stored locally.</AlertDescription>
-            </Alert>
-          )}
+        try {  
+            await signIn(email, password); // Attempt to sign in  
+            router.push("/dashboard"); // Navigate to dashboard on success  
+        } catch (err) {  
+            setError(err); // Set error if sign in fails  
+        } finally {  
+            setIsLoading(false); // Reset loading state  
+        }  
+    };  
 
-          {error && (
-            <Alert
-              className={`mb-4 ${isExistingAccount ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-red-50 border-red-200 text-red-700"}`}
-              variant={isExistingAccount ? "default" : "destructive"}
-            >
-              <AlertCircle className="h-4 w-4 mr-2" />
-              <AlertDescription>
-                {error}
-                {isExistingAccount && (
-                  <div className="mt-2">
-                    <Link href="/" className="text-primary-600 hover:underline font-medium">
-                      Sign in to your existing account
-                    </Link>
-                  </div>
-                )}
-              </AlertDescription>
-            </Alert>
-          )}
+    return (  
+        <div>  
+            <motion.div>  
+                <CardContainer>  
+                    <form onSubmit={handleSubmit}>  
+                        <Input   
+                            type="email"  
+                            placeholder="Email"  
+                            value={email}  
+                            onChange={(e) => setEmail(e.target.value)}  
+                            required  
+                        />  
+                        <Input   
+                            type="password"  
+                            placeholder="Password"  
+                            value={password}  
+                            onChange={(e) => setPassword(e.target.value)}  
+                            required  
+                        />  
+                        {error && (  
+                            <Alert>  
+                                <AlertDescription>{error.message}</AlertDescription>  
+                            </Alert>  
+                        )}  
+                        <Button type="submit" disabled={isLoading}>  
+                            {isLoading ? "Signing In..." : "Sign In"}  
+                        </Button>  
+                        <div className="text-center text-sm">  
+                            <span className="text-gray-600">Don't have an account?</span>{" "}  
+                            <Link href="/register" className="text-primary-600 hover:underline font-medium">  
+                                Create Account  
+                            </Link>  
+                        </div>  
+                    </form>  
+                </CardContainer>  
+            </motion.div>  
+        </div>  
+    );  
+};  
 
-          <form onSubmit={handleSignup} className="space-y-5">
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                required
-                className="h-11"
-              />
-            </div>
+// Main Application Component  
+const MyApp = () => {  
+    return (  
+        <AuthProvider>  
+            <SignInForm />  
+        </AuthProvider>  
+    );  
+};  
 
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Create a password (min. 6 characters)"
-                required
-                className="h-11"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
-                Confirm Password
-              </label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm your password"
-                required
-                className="h-11"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full h-11 bg-primary-600 hover:bg-primary-700 text-white"
-              disabled={isLoading}
-            >
-              {isLoading ? "Creating Account..." : "Create Account"}
-            </Button>
-
-            <div className="text-center text-sm">
-              <span className="text-gray-600">Already have an account?</span>{" "}
-              <Link href="/" className="text-primary-600 hover:underline font-medium">
-                Sign In
-              </Link>
-            </div>
-          </form>
-        </CardContainer>
-      </motion.div>
-    </div>
-  )
-}
+export default MyApp;  
