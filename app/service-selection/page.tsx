@@ -1,15 +1,23 @@
 "use client"
 
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/auth-context"
 import MainLayout from "@/components/layout/main-layout"
 import { CardContainer } from "@/components/ui/card-container"
 import { motion } from "framer-motion"
 
 export default function ServiceSelection() {
   const router = useRouter()
+  const { currentUser, loading } = useAuth()
+
+  useEffect(() => {
+    if (!loading && !currentUser) {
+      router.replace("/")
+    }
+  }, [loading, currentUser, router])
 
   const handleServiceSelect = (service: string) => {
-    // Store the selected service in localStorage for use in the calculator
     localStorage.setItem("selectedService", service)
     router.push(`/calculator?service=${service}`)
   }
@@ -20,18 +28,9 @@ export default function ServiceSelection() {
       name: "Drink and Drive Service",
       description: "Safe transportation after drinking",
       icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-6 h-6"
-        >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+          strokeLinejoin="round" className="w-6 h-6">
           <path d="M8 22h8"></path>
           <path d="M7 10h10"></path>
           <path d="M12 10v12"></path>
@@ -44,18 +43,9 @@ export default function ServiceSelection() {
       name: "Day Time Service",
       description: "Scheduled rides during the day",
       icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-6 h-6"
-        >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+          strokeLinejoin="round" className="w-6 h-6">
           <circle cx="12" cy="12" r="4"></circle>
           <path d="M12 2v2"></path>
           <path d="M12 20v2"></path>
@@ -73,18 +63,9 @@ export default function ServiceSelection() {
       name: "Vehicle Delivery Service",
       description: "Vehicle transport to your location",
       icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-6 h-6"
-        >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+          strokeLinejoin="round" className="w-6 h-6">
           <path d="M10 17h4V5H2v12h3"></path>
           <path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"></path>
           <circle cx="7.5" cy="17.5" r="2.5"></circle>
@@ -97,18 +78,9 @@ export default function ServiceSelection() {
       name: "Payments",
       description: "View and manage payments",
       icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-6 h-6"
-        >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+          strokeLinejoin="round" className="w-6 h-6">
           <rect width="20" height="14" x="2" y="5" rx="2"></rect>
           <line x1="2" x2="22" y1="10" y2="10"></line>
         </svg>
@@ -116,20 +88,21 @@ export default function ServiceSelection() {
     },
   ]
 
-  // Animation variants for staggered animations
   const container = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
+      transition: { staggerChildren: 0.1 },
     },
   }
 
   const item = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0 },
+  }
+
+  if (loading || !currentUser) {
+    return <div className="text-center py-20 text-gray-600 text-sm">Loading...</div>
   }
 
   return (
@@ -144,13 +117,11 @@ export default function ServiceSelection() {
           <motion.div key={service.id} variants={item}>
             <CardContainer
               className="card-hover cursor-pointer"
-              onClick={() => {
-                if (service.id === "payments") {
-                  router.push("/payments")
-                } else {
-                  handleServiceSelect(service.id)
-                }
-              }}
+              onClick={() =>
+                service.id === "payments"
+                  ? router.push("/payments")
+                  : handleServiceSelect(service.id)
+              }
             >
               <div className="flex items-center space-x-4">
                 <div className="bg-primary-50 p-3 rounded-full text-primary-600">{service.icon}</div>
