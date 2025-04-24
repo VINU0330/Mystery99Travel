@@ -2,27 +2,27 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export function middleware(request: NextRequest) {
-  // Get the path of the request
+  const response = NextResponse.next()
+
+  // Disable caching of this response
+  response.headers.set("Cache-Control", "no-store")
+
+  // Your existing logic
   const path = request.nextUrl.pathname
-
-  // Define public paths that don't require authentication
   const isPublicPath = path === "/" || path === "/signup" || path === "/forgot-password"
-
-  // Get the session token from cookies
   const token = request.cookies.get("session")?.value || ""
 
-  // If the path is not public and there's no token, redirect to login
   if (!isPublicPath && !token) {
     return NextResponse.redirect(new URL("/", request.url))
   }
 
-  // If the path is public and there's a token, redirect to service selection
   if (isPublicPath && token) {
     return NextResponse.redirect(new URL("/service-selection", request.url))
   }
 
-  return NextResponse.next()
+  return response
 }
+
 
 // Configure the middleware to run on specific paths
 export const config = {
