@@ -1,50 +1,62 @@
 "use client"
 
-import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { CardContainer } from "@/components/ui/card-container";
-import { motion } from "framer-motion";
-import { useAuth } from "@/contexts/auth-context";
-import Link from "next/link";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import type React from "react"
+import { useState } from "react"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { CardContainer } from "@/components/ui/card-container"
+import { motion } from "framer-motion"
+import { useAuth } from "@/contexts/auth-context"
+import Link from "next/link"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
+import { FirebaseError } from "firebase/app"
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
-  const { login, isUsingLocalAuth } = useAuth();
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const router = useRouter()
+  const { login, isUsingLocalAuth } = useAuth()
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
+    e.preventDefault()
+    setError("")
+    setIsLoading(true)
 
     try {
-      await login(email, password);
-      router.push("/service-selection");
-    } catch (error: any) {
-      console.error("Login error:", error);
-      
-      if (error.message.includes("invalid-email") || !email.includes("@")) {
-        setError("Please enter a valid email address");
-      } else if (error.message.includes("wrong-password")) {
-        setError("Incorrect password. Please try again.");
-      } else if (error.message.includes("user-not-found")) {
-        setError("No account found with this email. Please sign up.");
-      } else if (error.message.includes("Invalid credentials")) {
-        setError("Invalid email or password");
+      await login(email, password)
+      router.push("/service-selection")
+    } catch (error) {
+      console.error("Login error:", error)
+
+      // Handle Firebase specific errors
+      if (error instanceof FirebaseError) {
+        switch (error.code) {
+          case "auth/user-not-found":
+            setError("No account found with this email. Please sign up.")
+            break
+          case "auth/wrong-password":
+            setError("Incorrect password. Please try again.")
+            break
+          case "auth/invalid-email":
+            setError("Please enter a valid email address.")
+            break
+          case "auth/too-many-requests":
+            setError("Too many failed login attempts. Please try again later.")
+            break
+          default:
+            setError(`Failed to sign in: ${error.message}`)
+        }
       } else {
-        setError("Failed to sign in. Please try again later.");
+        setError("Failed to sign in. Please check your credentials.")
       }
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -64,7 +76,7 @@ export default function Login() {
           {isUsingLocalAuth && (
             <Alert className="mb-4 bg-blue-50 border-blue-200 text-blue-800">
               <AlertCircle className="h-4 w-4 mr-2" />
-              <AlertDescription>Using local authentication mode</AlertDescription>
+              <AlertDescription>Using local authentication mode. Your data will be stored locally.</AlertDescription>
             </Alert>
           )}
 
@@ -107,7 +119,6 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
                 required
-                minLength={6}
                 className="h-11"
               />
             </div>
@@ -130,5 +141,5 @@ export default function Login() {
         </CardContainer>
       </motion.div>
     </div>
-  );
+  )
 }

@@ -1,80 +1,164 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import { useRouter } from "next/navigation";
-
-type User = FirebaseUser | { email: string } | null;
+import type React from "react"
+import { createContext, useContext, useEffect, useState } from "react"
+import {
+  type User,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth"
+import { auth } from "@/lib/firebase"
+import { useRouter } from "next/navigation"
+import type { FirebaseError } from "firebase/app"
 
 interface AuthContextType {
-  user: User;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  isUsingLocalAuth: boolean;
+  currentUser: User | null
+  loading: boolean
+  login: (email: string, password: string) => Promise<void>
+  signup: (email: string, password: string) => Promise<void>
+  logout: () => Promise<void>
+  isUsingLocalAuth: boolean
 }
 
-const AuthContext = createContext<AuthContextType>(null!);
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User>(null);
-  const [isUsingLocalAuth, setIsUsingLocalAuth] = useState(false);
-  const router = useRouter();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        setIsUsingLocalAuth(false);
-      } else {
-        // Check local storage for user
-        const localUser = localStorage.getItem('user');
-        if (localUser) {
-          setUser(JSON.parse(localUser));
-          setIsUsingLocalAuth(true);
-        } else {
-          setUser(null);
-        }
-      }
-    });
-
-    return unsubscribe;
-  }, []);
-
-  const login = async (email: string, password: string) => {
-    try {
-      // Try Firebase auth first
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (firebaseError) {
-      console.log("Falling back to local auth...");
-      // Fallback to local auth
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const user = users.find((u: any) => u.email === email && u.password === password);
-      
-      if (!user) {
-        throw new Error("Invalid credentials");
-      }
-
-      localStorage.setItem('user', JSON.stringify(user));
-      setUser(user);
-      setIsUsingLocalAuth(true);
-    }
-  };
-
-  const logout = async () => {
-    if (!isUsingLocalAuth) {
-      await auth.signOut();
-    }
-    localStorage.removeItem('user');
-    setUser(null);
-    router.push('/login');
-  };
-
-  const value = { user, login, logout, isUsingLocalAuth };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider")
+  }
+  return context
+}
+
+// Local authentication fallback
+interface LocalUser {
+  uid: string
+  email: string
+  displayName?: string
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [isUsingLocalAuth, setIsUsingLocalAuth] = useState(false)
+  const router = useRouter()
+
+  useEffect(() => {
+    try {
+      // Try to use Firebase Auth
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setCurrentUser(user)
+        setLoading(false)
+      })
+
+      return unsubscribe
+    } catch (error) {
+      console.error("Firebase auth error:", error)
+      console.log("Falling back to local authentication")
+      setIsUsingLocalAuth(true)
+
+      // Check for local user in localStorage
+      const localUserJson = localStorage.getItem("localUser")
+      if (localUserJson) {
+        try {
+          const localUser = JSON.parse(localUserJson) as LocalUser
+          setCurrentUser(localUser as unknown as User)
+        } catch (e) {
+          console.error("Error parsing local user:", e)
+        }
+      }
+
+      setLoading(false)
+      return () => {}
+    }
+  }, [])
+
+  async function signup(email: string, password: string) {
+    if (isUsingLocalAuth) {
+      // Local authentication fallback
+      // Check if email already exists in local storage
+      const existingUser = localStorage.getItem(`user_${email}`)
+      if (existingUser) {
+        // Simulate Firebase's email-already-in-use error
+        const error = new Error("Email already in use") as FirebaseError
+        error.code = "auth/email-already-in-use"
+        return Promise.reject(error)
+      }
+
+      const localUser: LocalUser = {
+        uid: `local_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        email,
+      }
+      localStorage.setItem("localUser", JSON.stringify(localUser))
+      localStorage.setItem(`user_${email}`, password) // Not secure, just for demo
+      setCurrentUser(localUser as unknown as User)
+
+      // Set a cookie to simulate a session
+      document.cookie = `session=local_${Date.now()}; path=/; max-age=86400`
+
+      return Promise.resolve()
+    } else {
+      return createUserWithEmailAndPassword(auth, email, password).then((userCredential) => {
+        // Signed up
+        setCurrentUser(userCredential.user)
+      })
+    }
+  }
+
+  async function login(email: string, password: string) {
+    if (isUsingLocalAuth) {
+      // Local authentication fallback
+      const storedPassword = localStorage.getItem(`user_${email}`)
+      if (storedPassword === password) {
+        const localUserJson = localStorage.getItem("localUser")
+        if (localUserJson) {
+          const localUser = JSON.parse(localUserJson) as LocalUser
+          setCurrentUser(localUser as unknown as User)
+
+          // Set a cookie to simulate a session
+          document.cookie = `session=local_${Date.now()}; path=/; max-age=86400`
+
+          return Promise.resolve()
+        }
+      }
+      // Simulate Firebase's wrong-password error
+      const error = new Error("Wrong password") as FirebaseError
+      error.code = "auth/wrong-password"
+      return Promise.reject(error)
+    } else {
+      return signInWithEmailAndPassword(auth, email, password).then((userCredential) => {
+        // Signed in
+        setCurrentUser(userCredential.user)
+      })
+    }
+  }
+
+  async function logout() {
+    if (isUsingLocalAuth) {
+      // Local authentication fallback
+      setCurrentUser(null)
+
+      // Clear the session cookie
+      document.cookie = "session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+
+      return Promise.resolve()
+    } else {
+      return signOut(auth).then(() => {
+        setCurrentUser(null)
+      })
+    }
+  }
+
+  const value = {
+    currentUser,
+    loading,
+    login,
+    signup,
+    logout,
+    isUsingLocalAuth,
+  }
+
+  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>
 }
