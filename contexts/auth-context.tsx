@@ -11,7 +11,6 @@ import {
 } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { useRouter } from "next/navigation"
-import type { FirebaseError } from "firebase/app"
 
 interface AuthContextType {
   currentUser: User | null
@@ -78,15 +77,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signup(email: string, password: string) {
     if (isUsingLocalAuth) {
       // Local authentication fallback
-      // Check if email already exists in local storage
-      const existingUser = localStorage.getItem(`user_${email}`)
-      if (existingUser) {
-        // Simulate Firebase's email-already-in-use error
-        const error = new Error("Email already in use") as FirebaseError
-        error.code = "auth/email-already-in-use"
-        return Promise.reject(error)
-      }
-
       const localUser: LocalUser = {
         uid: `local_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         email,
@@ -96,8 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setCurrentUser(localUser as unknown as User)
 
       // Set a cookie to simulate a session
-     document.cookie = `session=local_${Date.now()}; path=/; max-age=86400; SameSite=Lax; Secure`
-
+      document.cookie = `session=local_${Date.now()}; path=/; max-age=86400`
 
       return Promise.resolve()
     } else {
@@ -124,10 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return Promise.resolve()
         }
       }
-      // Simulate Firebase's wrong-password error
-      const error = new Error("Wrong password") as FirebaseError
-      error.code = "auth/wrong-password"
-      return Promise.reject(error)
+      return Promise.reject(new Error("Invalid email or password"))
     } else {
       return signInWithEmailAndPassword(auth, email, password).then((userCredential) => {
         // Signed in

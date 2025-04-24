@@ -11,7 +11,6 @@ import { useAuth } from "@/contexts/auth-context"
 import Link from "next/link"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
-import { FirebaseError } from "firebase/app"
 
 export default function Signup() {
   const [email, setEmail] = useState("")
@@ -19,24 +18,16 @@ export default function Signup() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const [isExistingAccount, setIsExistingAccount] = useState(false)
   const router = useRouter()
   const { signup, isUsingLocalAuth } = useAuth()
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    setIsExistingAccount(false)
 
     // Validate passwords match
     if (password !== confirmPassword) {
       setError("Passwords do not match")
-      return
-    }
-
-    // Validate password strength
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long")
       return
     }
 
@@ -47,26 +38,7 @@ export default function Signup() {
       router.push("/service-selection")
     } catch (error) {
       console.error("Signup error:", error)
-
-      // Handle Firebase specific errors
-      if (error instanceof FirebaseError) {
-        switch (error.code) {
-          case "auth/email-already-in-use":
-            setIsExistingAccount(true)
-            setError("An account with this email already exists.")
-            break
-          case "auth/invalid-email":
-            setError("Please enter a valid email address.")
-            break
-          case "auth/weak-password":
-            setError("Password is too weak. Please choose a stronger password.")
-            break
-          default:
-            setError(`Failed to create an account: ${error.message}`)
-        }
-      } else {
-        setError("Failed to create an account. Please try again.")
-      }
+      setError("Failed to create an account. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -95,21 +67,9 @@ export default function Signup() {
           )}
 
           {error && (
-            <Alert
-              className={`mb-4 ${isExistingAccount ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-red-50 border-red-200 text-red-700"}`}
-              variant={isExistingAccount ? "default" : "destructive"}
-            >
+            <Alert className="mb-4 bg-red-50 border-red-200 text-red-700" variant="destructive">
               <AlertCircle className="h-4 w-4 mr-2" />
-              <AlertDescription>
-                {error}
-                {isExistingAccount && (
-                  <div className="mt-2">
-                    <Link href="/" className="text-primary-600 hover:underline font-medium">
-                      Sign in to your existing account
-                    </Link>
-                  </div>
-                )}
-              </AlertDescription>
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
@@ -138,7 +98,7 @@ export default function Signup() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Create a password (min. 6 characters)"
+                placeholder="Create a password"
                 required
                 className="h-11"
               />
