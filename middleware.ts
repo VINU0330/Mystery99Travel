@@ -1,3 +1,8 @@
-export function middleware(request: NextRequest) {
-  return NextResponse.next()
+// middleware.ts
+export function middleware() {
+  return;
+}
+
+export const config = {
+  matcher: [],
 }
