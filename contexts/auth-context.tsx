@@ -98,6 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Set a cookie to simulate a session
      document.cookie = `session=local_${Date.now()}; path=/; max-age=86400; SameSite=Lax; Secure`
 
+
       return Promise.resolve()
     } else {
       return createUserWithEmailAndPassword(auth, email, password).then((userCredential) => {
