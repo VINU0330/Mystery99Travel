@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setCurrentUser(localUser as unknown as User)
 
       // Set a cookie to simulate a session
-    document.cookie = `session=local_${Date.now()}; path=/; max-age=86400; secure; samesite=lax`
+      document.cookie = `session=local_${Date.now()}; path=/; max-age=86400`
 
       return Promise.resolve()
     } else {
@@ -108,9 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setCurrentUser(localUser as unknown as User)
 
           // Set a cookie to simulate a session
-        document.cookie = `session=local_${Date.now()}; path=/; max-age=86400; secure; samesite=lax`
-
-
+          document.cookie = `session=local_${Date.now()}; path=/; max-age=86400`
 
           return Promise.resolve()
         }

@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { CardContainer } from "@/components/ui/card-container"
 import MainLayout from "@/components/layout/main-layout"
 import { motion } from "framer-motion"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   formatTime,
   calculateDrinkAndDrivePayment,
@@ -20,9 +21,40 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import { saveTrip } from "@/services/trip-service"
 
+// Define the trip state interface for saving/restoring
+interface SavedTripState {
+  userId: string
+  serviceType: string
+  step: number
+  pickupLocation: string
+  dropLocation: string
+  pickupArea: string
+  dropArea: string
+  endLocationArea: string
+  startMeterCount: string
+  endMeterCount: string
+  customerName: string
+  phoneNumber: string
+  paymentMethod: string
+  pickupTime: string
+  tripStartTime: number | null
+  tripEndTime: number | null
+  elapsedTime: number
+  tripDuration: string
+  isTimerRunning: boolean
+  finalTripDuration: string
+  finalElapsedTime: number
+  totalDistance: number
+  totalPayment: number
+  companyCommission: number
+  driverPayment: number
+  lastUpdated: number
+}
+
 export default function RideCalculator() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { currentUser } = useAuth()
 
   // Service type
   const [serviceType, setServiceType] = useState("drink-and-drive")
@@ -63,7 +95,10 @@ export default function RideCalculator() {
 
   // Add loading state for saving
   const [isSaving, setIsSaving] = useState(false)
-  const { currentUser } = useAuth()
+
+  // Add state for saved trip alert
+  const [hasSavedTrip, setHasSavedTrip] = useState(false)
+  const [isResumingTrip, setIsResumingTrip] = useState(false)
 
   // Load service type from URL or localStorage on component mount
   useEffect(() => {
@@ -78,6 +113,154 @@ export default function RideCalculator() {
       }
     }
   }, [searchParams])
+
+  // Check for saved trip on component mount
+  useEffect(() => {
+    if (!currentUser) return
+
+    const savedTripJson = localStorage.getItem(`saved_trip_${currentUser.uid}`)
+    if (savedTripJson) {
+      try {
+        const savedTrip = JSON.parse(savedTripJson) as SavedTripState
+
+        // Verify the saved trip belongs to the current user
+        if (savedTrip.userId === currentUser.uid) {
+          setHasSavedTrip(true)
+        }
+      } catch (error) {
+        console.error("Error parsing saved trip:", error)
+        // Clear invalid saved trip data
+        localStorage.removeItem(`saved_trip_${currentUser.uid}`)
+      }
+    }
+  }, [currentUser])
+
+  // Save current trip state whenever relevant state changes
+  useEffect(() => {
+    if (!currentUser || step === 3) return // Don't save if user is not logged in or trip is completed
+
+    // Only save if we've started a trip (step > 0 or pickup time is set)
+    if (step > 0 || pickupTime) {
+      const tripState: SavedTripState = {
+        userId: currentUser.uid,
+        serviceType,
+        step,
+        pickupLocation,
+        dropLocation,
+        pickupArea,
+        dropArea,
+        endLocationArea,
+        startMeterCount,
+        endMeterCount,
+        customerName,
+        phoneNumber,
+        paymentMethod,
+        pickupTime,
+        tripStartTime,
+        tripEndTime,
+        elapsedTime,
+        tripDuration,
+        isTimerRunning,
+        finalTripDuration,
+        finalElapsedTime,
+        totalDistance,
+        totalPayment,
+        companyCommission,
+        driverPayment,
+        lastUpdated: Date.now(),
+      }
+
+      localStorage.setItem(`saved_trip_${currentUser.uid}`, JSON.stringify(tripState))
+    }
+  }, [
+    currentUser,
+    step,
+    pickupLocation,
+    dropLocation,
+    pickupArea,
+    dropArea,
+    endLocationArea,
+    startMeterCount,
+    endMeterCount,
+    pickupTime,
+    tripDuration,
+    finalTripDuration,
+    totalDistance,
+    totalPayment,
+  ])
+
+  // Function to resume a saved trip
+  const resumeSavedTrip = () => {
+    if (!currentUser) return
+
+    const savedTripJson = localStorage.getItem(`saved_trip_${currentUser.uid}`)
+    if (!savedTripJson) return
+
+    try {
+      const savedTrip = JSON.parse(savedTripJson) as SavedTripState
+
+      // Restore all state from saved trip
+      setServiceType(savedTrip.serviceType)
+      setStep(savedTrip.step)
+      setPickupLocation(savedTrip.pickupLocation)
+      setDropLocation(savedTrip.dropLocation)
+      setPickupArea(savedTrip.pickupArea)
+      setDropArea(savedTrip.dropArea)
+      setEndLocationArea(savedTrip.endLocationArea)
+      setStartMeterCount(savedTrip.startMeterCount)
+      setEndMeterCount(savedTrip.endMeterCount)
+      setCustomerName(savedTrip.customerName)
+      setPhoneNumber(savedTrip.phoneNumber)
+      setPaymentMethod(savedTrip.paymentMethod)
+      setPickupTime(savedTrip.pickupTime)
+
+      // Handle timer state
+      setTripStartTime(savedTrip.tripStartTime)
+      setTripEndTime(savedTrip.tripEndTime)
+
+      // If the timer was running, calculate the elapsed time including the time since last update
+      if (savedTrip.isTimerRunning && savedTrip.tripStartTime) {
+        // Calculate how much time has passed since the trip was saved
+        const timePassedSinceSave = Math.floor((Date.now() - savedTrip.lastUpdated) / 1000)
+        const newElapsedTime = savedTrip.elapsedTime + timePassedSinceSave
+
+        setElapsedTime(newElapsedTime)
+        setTripDuration(formatTime(newElapsedTime))
+        setIsTimerRunning(true)
+      } else {
+        setElapsedTime(savedTrip.elapsedTime)
+        setTripDuration(savedTrip.tripDuration)
+        setIsTimerRunning(savedTrip.isTimerRunning)
+      }
+
+      setFinalTripDuration(savedTrip.finalTripDuration)
+      setFinalElapsedTime(savedTrip.finalElapsedTime)
+      setTotalDistance(savedTrip.totalDistance)
+      setTotalPayment(savedTrip.totalPayment)
+      setCompanyCommission(savedTrip.companyCommission)
+      setDriverPayment(savedTrip.driverPayment)
+
+      setHasSavedTrip(false)
+      setIsResumingTrip(true)
+
+      // After a short delay, reset the resuming state
+      setTimeout(() => {
+        setIsResumingTrip(false)
+      }, 3000)
+    } catch (error) {
+      console.error("Error resuming saved trip:", error)
+      // Clear invalid saved trip data
+      localStorage.removeItem(`saved_trip_${currentUser.uid}`)
+      setHasSavedTrip(false)
+    }
+  }
+
+  // Function to discard a saved trip
+  const discardSavedTrip = () => {
+    if (!currentUser) return
+    localStorage.removeItem(`saved_trip_${currentUser.uid}`)
+    setHasSavedTrip(false)
+  }
 
   // Handle pickup marking
   const handleMarkAsPickup = () => {
@@ -169,7 +352,7 @@ export default function RideCalculator() {
     }
   }
 
-  // Replace the handleFinalEndTrip function with this:
+  // Handle final end trip and save to database
   const handleFinalEndTrip = async () => {
     if (!currentUser) {
       alert("You must be logged in to save trip data.")
@@ -231,6 +414,11 @@ export default function RideCalculator() {
         ...additionalData,
       })
 
+      // Clear the saved trip data since it's now completed
+      if (currentUser) {
+        localStorage.removeItem(`saved_trip_${currentUser.uid}`)
+      }
+
       setStep(3)
     } catch (error) {
       console.error("Error saving trip:", error)
@@ -265,6 +453,11 @@ export default function RideCalculator() {
     setCompanyCommission(0)
     setDriverPayment(0)
     setFinalTripDuration("")
+
+    // Clear any saved trip data
+    if (currentUser) {
+      localStorage.removeItem(`saved_trip_${currentUser.uid}`)
+    }
 
     // Go back to service selection
     router.push("/service-selection")
@@ -313,6 +506,62 @@ export default function RideCalculator() {
 
   // Render the appropriate step
   const renderStep = () => {
+    // If there's a saved trip and we're at step 0, show the resume trip alert
+    if (hasSavedTrip && step === 0 && !pickupTime) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="space-y-6"
+        >
+          <Alert className="bg-amber-50 border-amber-200">
+            <AlertTitle className="text-amber-800">You have an unfinished trip</AlertTitle>
+            <AlertDescription className="text-amber-700">
+              You have a trip in progress that was interrupted. Would you like to resume it or start a new trip?
+            </AlertDescription>
+            <div className="flex gap-3 mt-4">
+              <Button onClick={resumeSavedTrip} className="bg-amber-600 hover:bg-amber-700 text-white">
+                Resume Trip
+              </Button>
+              <Button
+                onClick={discardSavedTrip}
+                variant="outline"
+                className="border-amber-300 text-amber-800 hover:bg-amber-100"
+              >
+                Start New Trip
+              </Button>
+            </div>
+          </Alert>
+        </motion.div>
+      )
+    }
+
+    // Show resuming notification if applicable
+    if (isResumingTrip) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="space-y-6"
+        >
+          <Alert className="bg-green-50 border-green-200">
+            <AlertTitle className="text-green-800">Trip Resumed</AlertTitle>
+            <AlertDescription className="text-green-700">
+              Your previous trip has been successfully resumed. You can continue from where you left off.
+            </AlertDescription>
+          </Alert>
+          {renderCurrentStep()}
+        </motion.div>
+      )
+    }
+
+    return renderCurrentStep()
+  }
+
+  // Render the current step content
+  const renderCurrentStep = () => {
     switch (step) {
       case 0:
         return (
