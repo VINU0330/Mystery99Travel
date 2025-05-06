@@ -19,7 +19,7 @@ export default function Signup() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
-  const { signup, isUsingLocalAuth } = useAuth()
+  const { signup } = useAuth()
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,14 +31,32 @@ export default function Signup() {
       return
     }
 
+    // Validate password length
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters")
+      return
+    }
+
     setIsLoading(true)
 
     try {
       await signup(email, password)
       router.push("/service-selection")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Signup error:", error)
-      setError("Failed to create an account. Please try again.")
+
+      // Provide user-friendly error messages based on Firebase error codes
+      if (error.code === "auth/email-already-in-use") {
+        setError("This email is already in use. Please try another email or sign in.")
+      } else if (error.code === "auth/invalid-email") {
+        setError("Please enter a valid email address.")
+      } else if (error.code === "auth/weak-password") {
+        setError("Password is too weak. Please use a stronger password.")
+      } else if (error.code === "auth/network-request-failed") {
+        setError("Network error. Please check your internet connection.")
+      } else {
+        setError("Failed to create an account. Please try again.")
+      }
     } finally {
       setIsLoading(false)
     }
@@ -53,18 +71,11 @@ export default function Signup() {
         className="w-full max-w-md"
       >
         <CardContainer>
-          <div className="flex flex-col items-center mb-8">
+          <div className="flex flex-col items-center mb-6">
             <img src="/logo.png" alt="Mystery 99 Travels & Tours" className="h-24 md:h-32 mb-4" />
             <h1 className="text-2xl font-bold text-gray-800">Create Account</h1>
             <p className="text-gray-500 mt-1">Sign up to get started</p>
           </div>
-
-          {isUsingLocalAuth && (
-            <Alert className="mb-4 bg-blue-50 border-blue-200 text-blue-800">
-              <AlertCircle className="h-4 w-4 mr-2" />
-              <AlertDescription>Using local authentication mode. Your data will be stored locally.</AlertDescription>
-            </Alert>
-          )}
 
           {error && (
             <Alert className="mb-4 bg-red-50 border-red-200 text-red-700" variant="destructive">
@@ -98,7 +109,7 @@ export default function Signup() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Create a password"
+                placeholder="Create a password (min 6 characters)"
                 required
                 className="h-11"
               />

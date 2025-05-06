@@ -35,106 +35,66 @@ const removeUndefined = (obj: Record<string, any>) => {
   return result
 }
 
-// Check if we're using local storage fallback
-const isUsingLocalStorage = typeof window !== "undefined" && localStorage.getItem("localUser") !== null
-
 export const saveTrip = async (tripData: Omit<TripData, "createdAt">) => {
   try {
     // Remove undefined values to prevent Firestore errors
     const cleanedData = removeUndefined(tripData)
 
-    if (isUsingLocalStorage) {
-      // Local storage fallback
-      const trips = JSON.parse(localStorage.getItem("trips") || "[]")
-      const newTrip = {
-        ...cleanedData,
-        id: `local_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-        createdAt: new Date(),
-      }
-      trips.push(newTrip)
-      localStorage.setItem("trips", JSON.stringify(trips))
-      return newTrip.id
-    } else {
-      // Firestore
-      const docRef = await addDoc(collection(db, "trips"), {
-        ...cleanedData,
-        createdAt: Timestamp.now(),
-      })
-      return docRef.id
-    }
+    // Save to Firestore
+    const docRef = await addDoc(collection(db, "trips"), {
+      ...cleanedData,
+      createdAt: Timestamp.now(),
+    })
+    return docRef.id
   } catch (error) {
     console.error("Error saving trip:", error)
-
-    // Fallback to local storage if Firestore fails
-    const trips = JSON.parse(localStorage.getItem("trips") || "[]")
-    const newTrip = {
-      ...removeUndefined(tripData),
-      id: `local_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-      createdAt: new Date(),
-    }
-    trips.push(newTrip)
-    localStorage.setItem("trips", JSON.stringify(trips))
-    return newTrip.id
+    throw error
   }
 }
 
 export const getUserTrips = async (userId: string) => {
   try {
-    if (isUsingLocalStorage) {
-      // Local storage fallback
-      const trips = JSON.parse(localStorage.getItem("trips") || "[]")
+    try {
+      // First attempt: Try with the composite index if it exists
+      const q = query(collection(db, "trips"), where("userId", "==", userId), orderBy("createdAt", "desc"))
+      const querySnapshot = await getDocs(q)
+      const trips: Array<TripData & { id: string }> = []
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data() as TripData
+        trips.push({
+          ...data,
+          id: doc.id,
+        })
+      })
+
       return trips
-        .filter((trip: any) => trip.userId === userId)
-        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    } else {
-      // Firestore - Modified to avoid composite index requirement
-      try {
-        // First attempt: Try with the composite index if it exists
-        const q = query(collection(db, "trips"), where("userId", "==", userId), orderBy("createdAt", "desc"))
-        const querySnapshot = await getDocs(q)
-        const trips: Array<TripData & { id: string }> = []
+    } catch (indexError) {
+      console.log("Index error, falling back to client-side sorting:", indexError)
 
-        querySnapshot.forEach((doc) => {
-          const data = doc.data() as TripData
-          trips.push({
-            ...data,
-            id: doc.id,
-          })
+      // Second attempt: Just filter by userId without ordering (no index needed)
+      const q = query(collection(db, "trips"), where("userId", "==", userId))
+      const querySnapshot = await getDocs(q)
+      const trips: Array<TripData & { id: string }> = []
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data() as TripData
+        trips.push({
+          ...data,
+          id: doc.id,
         })
+      })
 
-        return trips
-      } catch (indexError) {
-        console.log("Index error, falling back to client-side sorting:", indexError)
-
-        // Second attempt: Just filter by userId without ordering (no index needed)
-        const q = query(collection(db, "trips"), where("userId", "==", userId))
-        const querySnapshot = await getDocs(q)
-        const trips: Array<TripData & { id: string }> = []
-
-        querySnapshot.forEach((doc) => {
-          const data = doc.data() as TripData
-          trips.push({
-            ...data,
-            id: doc.id,
-          })
-        })
-
-        // Sort on the client side instead
-        return trips.sort((a, b) => {
-          const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : a.createdAt.toDate().getTime()
-          const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : b.createdAt.toDate().getTime()
-          return dateB - dateA // descending order
-        })
-      }
+      // Sort on the client side instead
+      return trips.sort((a, b) => {
+        const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : a.createdAt.toDate().getTime()
+        const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : b.createdAt.toDate().getTime()
+        return dateB - dateA // descending order
+      })
     }
   } catch (error) {
     console.error("Error getting trips:", error)
-
-    // Fallback to local storage if Firestore fails
-    const trips = JSON.parse(localStorage.getItem("trips") || "[]")
-    return trips
-      .filter((trip: any) => trip.userId === userId)
-      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    throw error
   }
 }
 

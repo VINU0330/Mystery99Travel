@@ -1,50 +1,56 @@
 "use client"
 
-import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { CardContainer } from "@/components/ui/card-container";
-import { motion } from "framer-motion";
-import { useAuth } from "@/contexts/auth-context";
-import Link from "next/link";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import type React from "react"
+import { useState } from "react"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { CardContainer } from "@/components/ui/card-container"
+import { motion } from "framer-motion"
+import { useAuth } from "@/contexts/auth-context"
+import Link from "next/link"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
-  const { login, isUsingLocalAuth } = useAuth();
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const router = useRouter()
+  const { login } = useAuth()
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
+    e.preventDefault()
+    setError("")
+    setIsLoading(true)
 
     try {
-      await login(email, password);
-      router.push("/service-selection");
+      await login(email, password)
+      router.push("/service-selection")
     } catch (error: any) {
-      console.error("Login error:", error);
-      
-      if (error.message.includes("invalid-email") || !email.includes("@")) {
-        setError("Please enter a valid email address");
-      } else if (error.message.includes("wrong-password")) {
-        setError("Incorrect password. Please try again.");
-      } else if (error.message.includes("user-not-found")) {
-        setError("No account found with this email. Please sign up.");
-      } else if (error.message.includes("Invalid credentials")) {
-        setError("Invalid email or password");
+      console.error("Login error:", error)
+
+      // Provide user-friendly error messages based on Firebase error codes
+      if (
+        error.code === "auth/invalid-credential" ||
+        error.code === "auth/user-not-found" ||
+        error.code === "auth/wrong-password"
+      ) {
+        setError("Invalid email or password. Please try again.")
+      } else if (error.code === "auth/invalid-email") {
+        setError("Please enter a valid email address.")
+      } else if (error.code === "auth/too-many-requests") {
+        setError("Too many failed login attempts. Please try again later.")
+      } else if (error.code === "auth/network-request-failed") {
+        setError("Network error. Please check your internet connection.")
       } else {
-        setError("Failed to sign in. Please try again later.");
+        setError("Failed to sign in. Please try again.")
       }
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -55,18 +61,11 @@ export default function Login() {
         className="w-full max-w-md"
       >
         <CardContainer>
-          <div className="flex flex-col items-center mb-8">
+          <div className="flex flex-col items-center mb-6">
             <img src="/logo.png" alt="Mystery 99 Travels & Tours" className="h-24 md:h-32 mb-4" />
             <h1 className="text-2xl font-bold text-gray-800">Welcome Back</h1>
             <p className="text-gray-500 mt-1">Sign in to your account</p>
           </div>
-
-          {isUsingLocalAuth && (
-            <Alert className="mb-4 bg-blue-50 border-blue-200 text-blue-800">
-              <AlertCircle className="h-4 w-4 mr-2" />
-              <AlertDescription>Using local authentication mode</AlertDescription>
-            </Alert>
-          )}
 
           {error && (
             <Alert className="mb-4 bg-red-50 border-red-200 text-red-700" variant="destructive">
@@ -92,14 +91,9 @@ export default function Login() {
             </div>
 
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label htmlFor="password" className="text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <Link href="/forgot-password" className="text-xs text-primary-600 hover:underline">
-                  Forgot Password?
-                </Link>
-              </div>
+              <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                Password
+              </label>
               <Input
                 id="password"
                 type="password"
@@ -107,7 +101,6 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
                 required
-                minLength={6}
                 className="h-11"
               />
             </div>
@@ -130,5 +123,5 @@ export default function Login() {
         </CardContainer>
       </motion.div>
     </div>
-  );
+  )
 }
