@@ -1,7 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
@@ -19,7 +20,15 @@ export default function Signup() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
-  const { signup } = useAuth()
+  const { signup, currentUser } = useAuth()
+
+  // Check if user is already logged in
+  useEffect(() => {
+    if (currentUser) {
+      console.log("User already logged in, redirecting to service-selection")
+      router.push("/service-selection")
+    }
+  }, [currentUser, router])
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,7 +50,12 @@ export default function Signup() {
 
     try {
       await signup(email, password)
-      router.push("/service-selection")
+      console.log("Signup successful, redirecting to service-selection")
+
+      // Force navigation after successful signup
+      setTimeout(() => {
+        router.push("/service-selection")
+      }, 500)
     } catch (error: any) {
       console.error("Signup error:", error)
 

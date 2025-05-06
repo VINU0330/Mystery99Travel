@@ -1,7 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
@@ -18,7 +19,15 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
-  const { login } = useAuth()
+  const { login, currentUser } = useAuth()
+
+  // Check if user is already logged in
+  useEffect(() => {
+    if (currentUser) {
+      console.log("User already logged in, redirecting to service-selection")
+      router.push("/service-selection")
+    }
+  }, [currentUser, router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,7 +36,12 @@ export default function Login() {
 
     try {
       await login(email, password)
-      router.push("/service-selection")
+      console.log("Login successful, redirecting to service-selection")
+
+      // Force navigation after successful login
+      setTimeout(() => {
+        router.push("/service-selection")
+      }, 500)
     } catch (error: any) {
       console.error("Login error:", error)
 
