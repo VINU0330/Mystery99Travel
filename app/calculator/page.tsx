@@ -16,6 +16,14 @@ import {
   calculateDayTimeServicePayment,
   calculateVehicleDeliveryPayment,
 } from "@/lib/utils"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 // Import the necessary functions and hooks
 import { useAuth } from "@/contexts/auth-context"
@@ -99,6 +107,13 @@ export default function RideCalculator() {
   // Add state for saved trip alert
   const [hasSavedTrip, setHasSavedTrip] = useState(false)
   const [isResumingTrip, setIsResumingTrip] = useState(false)
+
+  // Add state for temporary amount calculation
+  const [showTempCalculation, setShowTempCalculation] = useState(false)
+  const [tempDistance, setTempDistance] = useState(0)
+  const [tempPayment, setTempPayment] = useState(0)
+  const [tempDuration, setTempDuration] = useState("")
+  const [tempElapsedTime, setTempElapsedTime] = useState(0)
 
   // Load service type from URL or localStorage on component mount
   useEffect(() => {
@@ -263,7 +278,7 @@ export default function RideCalculator() {
   }
 
   // Handle pickup marking
-  const handleMarkAsPickup = () => {
+  const handleLocationArrived = () => {
     const now = new Date()
     const formattedTime = now.toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -296,6 +311,42 @@ export default function RideCalculator() {
     }
   }
 
+  // Handle showing temporary calculation
+  const handleShowTempCalculation = () => {
+    // Calculate current distance if meter readings are available
+    let currentDistance = 0
+    if (startMeterCount && endMeterCount && !isNaN(Number(startMeterCount)) && !isNaN(Number(endMeterCount))) {
+      currentDistance = Math.max(0, Number(endMeterCount) - Number(startMeterCount))
+    }
+    setTempDistance(currentDistance)
+
+    // Save current trip duration
+    setTempDuration(tripDuration)
+    setTempElapsedTime(elapsedTime)
+
+    // Calculate payment based on service type
+    const durationMinutes = Math.ceil(elapsedTime / 60)
+    let payment = 0
+
+    if (serviceType === "drink-and-drive") {
+      const isPickupOutOfColombo = pickupArea === "out-colombo"
+      const isDropOutOfColombo = dropArea === "out-colombo"
+      payment = calculateDrinkAndDrivePayment(
+        currentDistance,
+        durationMinutes,
+        isPickupOutOfColombo,
+        isDropOutOfColombo,
+      )
+    } else if (serviceType === "day-time") {
+      payment = calculateDayTimeServicePayment(durationMinutes)
+    } else if (serviceType === "vehicle-delivery") {
+      payment = calculateVehicleDeliveryPayment(endLocationArea)
+    }
+
+    setTempPayment(payment)
+    setShowTempCalculation(true)
+  }
+
   // Handle drop marking
   const handleMarkAsDropped = () => {
     setTripEndTime(Date.now())
@@ -307,6 +358,11 @@ export default function RideCalculator() {
 
   // Handle trip end and calculate payment
   const handleEndTrip = () => {
+    // Automatically mark as dropped if not already done
+    if (!tripEndTime) {
+      handleMarkAsDropped()
+    }
+
     // Validation based on service type
     if (
       (serviceType === "drink-and-drive" && dropLocation && dropArea && endMeterCount) ||
@@ -321,7 +377,7 @@ export default function RideCalculator() {
       setTotalDistance(distance)
 
       // Calculate trip duration in minutes - use the final elapsed time
-      const durationMinutes = Math.ceil(finalElapsedTime / 60)
+      const durationMinutes = Math.ceil(finalElapsedTime > 0 ? finalElapsedTime / 60 : elapsedTime / 60)
 
       // Calculate payment based on service type
       let payment = 0
@@ -348,6 +404,15 @@ export default function RideCalculator() {
       }
 
       setIsTimerRunning(false)
+
+      // If we don't have final values yet, set them now
+      if (!finalTripDuration) {
+        setFinalTripDuration(tripDuration)
+      }
+      if (finalElapsedTime === 0) {
+        setFinalElapsedTime(elapsedTime)
+      }
+
       setStep(2)
     }
   }
@@ -368,8 +433,8 @@ export default function RideCalculator() {
         serviceType,
         pickupLocation,
         dropLocation,
-        tripDuration: finalTripDuration,
-        elapsedTime: finalElapsedTime,
+        tripDuration: finalTripDuration || tripDuration,
+        elapsedTime: finalElapsedTime || elapsedTime,
         totalPayment,
         companyCommission,
         driverPayment,
@@ -613,8 +678,11 @@ export default function RideCalculator() {
                   </div>
                 </div>
 
-                <Button className="w-full bg-primary-600 hover:bg-primary-700 text-white" onClick={handleMarkAsPickup}>
-                  Mark As Picked
+                <Button
+                  className="w-full bg-primary-600 hover:bg-primary-700 text-white"
+                  onClick={handleLocationArrived}
+                >
+                  Location Arrived
                 </Button>
 
                 {(serviceType === "drink-and-drive" || serviceType === "vehicle-delivery") && (
@@ -712,10 +780,6 @@ export default function RideCalculator() {
                   </div>
                 </div>
 
-                <Button className="w-full bg-primary-600 hover:bg-primary-700 text-white" onClick={handleMarkAsDropped}>
-                  Mark As Dropped
-                </Button>
-
                 {(serviceType === "drink-and-drive" || serviceType === "vehicle-delivery") && (
                   <div>
                     <label className="text-sm font-medium">End Meter Count</label>
@@ -728,6 +792,18 @@ export default function RideCalculator() {
                     />
                   </div>
                 )}
+
+                <Button
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={handleShowTempCalculation}
+                  disabled={
+                    !dropLocation ||
+                    (serviceType === "vehicle-delivery" ? !endLocationArea : !dropArea) ||
+                    (serviceType !== "day-time" && !endMeterCount)
+                  }
+                >
+                  Show Current Amount
+                </Button>
               </div>
             </CardContainer>
 
@@ -766,7 +842,7 @@ export default function RideCalculator() {
                   )}
 
                   <div className="font-medium">Total Trip Time</div>
-                  <div className="text-right font-mono text-primary-600">{finalTripDuration}</div>
+                  <div className="text-right font-mono text-primary-600">{finalTripDuration || tripDuration}</div>
 
                   <div className="font-medium">Pickup Location</div>
                   <div className="text-right">{pickupLocation}</div>
@@ -893,6 +969,46 @@ export default function RideCalculator() {
                 : "Rider Payment"}
         </h2>
         {renderStep()}
+
+        {/* Temporary Amount Calculation Dialog */}
+        <Dialog open={showTempCalculation} onOpenChange={setShowTempCalculation}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Current Trip Amount</DialogTitle>
+              <DialogDescription>
+                This is the current amount based on the trip so far. You can continue the trip after closing this
+                window.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                {(serviceType === "drink-and-drive" || serviceType === "vehicle-delivery") && tempDistance > 0 && (
+                  <>
+                    <div className="font-medium">Current Distance</div>
+                    <div className="text-right">{tempDistance.toFixed(2)} KM</div>
+                  </>
+                )}
+
+                <div className="font-medium">Current Duration</div>
+                <div className="text-right font-mono">{tempDuration}</div>
+
+                <div className="font-medium">Pickup Location</div>
+                <div className="text-right">{pickupLocation}</div>
+
+                <div className="font-medium">Drop Location</div>
+                <div className="text-right">{dropLocation || "Not set"}</div>
+              </div>
+
+              <div className="bg-primary-50 rounded-lg p-4 text-center mt-4">
+                <div className="text-sm font-medium text-gray-600">Current Amount</div>
+                <div className="text-3xl font-bold text-primary-600">Rs.{tempPayment.toLocaleString()}</div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setShowTempCalculation(false)}>Continue Trip</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   )

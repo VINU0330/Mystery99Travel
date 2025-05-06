@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import MainLayout from "@/components/layout/main-layout"
-import { CardContainer } from "@/components/ui/card-container"
+import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 
 export default function ServiceSelection() {
@@ -30,7 +30,7 @@ export default function ServiceSelection() {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="w-6 h-6"
+          className="w-8 h-8"
         >
           <path d="M8 22h8"></path>
           <path d="M7 10h10"></path>
@@ -54,7 +54,7 @@ export default function ServiceSelection() {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="w-6 h-6"
+          className="w-8 h-8"
         >
           <circle cx="12" cy="12" r="4"></circle>
           <path d="M12 2v2"></path>
@@ -83,7 +83,7 @@ export default function ServiceSelection() {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="w-6 h-6"
+          className="w-8 h-8"
         >
           <path d="M10 17h4V5H2v12h3"></path>
           <path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"></path>
@@ -107,7 +107,7 @@ export default function ServiceSelection() {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="w-6 h-6"
+          className="w-8 h-8"
         >
           <rect width="20" height="14" x="2" y="5" rx="2"></rect>
           <line x1="2" x2="22" y1="10" y2="10"></line>
@@ -116,34 +116,21 @@ export default function ServiceSelection() {
     },
   ]
 
-  // Animation variants for staggered animations
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  }
-
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 },
-  }
-
   return (
     <MainLayout title="Rider Payment Calculator">
-      <motion.div
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-1 md:grid-cols-2 gap-4"
-      >
+      <div className="grid grid-cols-1 gap-4">
         {services.map((service) => (
-          <motion.div key={service.id} variants={item}>
-            <CardContainer
-              className="card-hover cursor-pointer"
+          <motion.div
+            key={service.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Button
+              variant="outline"
+              className="w-full h-auto py-6 flex flex-col items-center justify-center gap-3 bg-white hover:bg-gray-50 border-2 border-gray-200"
               onClick={() => {
                 if (service.id === "payments") {
                   router.push("/payments")
@@ -152,17 +139,15 @@ export default function ServiceSelection() {
                 }
               }}
             >
-              <div className="flex items-center space-x-4">
-                <div className="bg-primary-50 p-3 rounded-full text-primary-600">{service.icon}</div>
-                <div>
-                  <h3 className="font-medium text-lg">{service.name}</h3>
-                  <p className="text-gray-500 text-sm">{service.description}</p>
-                </div>
+              <div className="bg-primary-50 p-4 rounded-full text-primary-600">{service.icon}</div>
+              <div className="text-center">
+                <h3 className="font-medium text-lg">{service.name}</h3>
+                <p className="text-gray-500 text-sm">{service.description}</p>
               </div>
-            </CardContainer>
+            </Button>
           </motion.div>
         ))}
-      </motion.div>
+      </div>
     </MainLayout>
   )
 }
