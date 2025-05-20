@@ -14,6 +14,9 @@ export interface TripData {
   distance?: number
   tripDuration: string
   elapsedTime: number
+  waitingTime?: number
+  waitingCharges?: number
+  basePayment?: number
   totalPayment: number
   companyCommission: number
   driverPayment: number
@@ -137,6 +140,8 @@ export const formatTripForDisplay = (trip: TripData & { id: string }) => {
     tripId,
     date: dateStr,
     service,
+    basePayment: trip.basePayment || trip.totalPayment,
+    waitingCharges: trip.waitingCharges || 0,
     totalPayment: trip.totalPayment,
     commission: trip.companyCommission,
     riderPayment: trip.driverPayment,

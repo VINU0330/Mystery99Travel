@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import MainLayout from "@/components/layout/main-layout"
 import { CardContainer } from "@/components/ui/card-container"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { motion } from "framer-motion"
 import { useAuth } from "@/contexts/auth-context"
 import { getUserTrips, formatTripForDisplay } from "@/services/trip-service"
@@ -15,6 +15,8 @@ interface PaymentRecord {
   tripId: string
   date: string
   service: string
+  basePayment: number
+  waitingCharges: number
   totalPayment: number
   commission: number
   riderPayment: number
@@ -241,6 +243,12 @@ export default function Payments() {
                               Service
                             </th>
                             <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Base
+                            </th>
+                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Waiting
+                            </th>
+                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Total
                             </th>
                             <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -260,6 +268,12 @@ export default function Payments() {
                               <td className="py-3 px-4 whitespace-nowrap text-sm">{record.tripId}</td>
                               <td className="py-3 px-4 whitespace-nowrap text-sm">{record.date}</td>
                               <td className="py-3 px-4 whitespace-nowrap text-sm">{record.service}</td>
+                              <td className="py-3 px-4 whitespace-nowrap text-sm">
+                                Rs.{record.basePayment.toLocaleString()}
+                              </td>
+                              <td className="py-3 px-4 whitespace-nowrap text-sm">
+                                Rs.{record.waitingCharges.toLocaleString()}
+                              </td>
                               <td className="py-3 px-4 whitespace-nowrap text-sm">
                                 Rs.{record.totalPayment.toLocaleString()}
                               </td>

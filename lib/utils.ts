@@ -41,11 +41,24 @@ export function formatTimeFromComponents(hours: number, minutes: number, seconds
   return formattedTime
 }
 
+// Calculate waiting time charges
+export function calculateWaitingCharges(waitingTimeSeconds: number): number {
+  // First 15 minutes (900 seconds) are free
+  if (waitingTimeSeconds <= 900) {
+    return 0
+  }
+
+  // After first 15 minutes, charge Rs. 300 for every 15 minutes or part thereof
+  const chargeable15MinBlocks = Math.ceil((waitingTimeSeconds - 900) / 900)
+  return chargeable15MinBlocks * 300
+}
+
 export function calculateDrinkAndDrivePayment(
   distance: number,
   durationMinutes: number,
   isPickupOutOfColombo: boolean,
   isDropOutOfColombo: boolean,
+  waitingCharges = 0,
 ) {
   // Base package: LKR 1700 for first 55 minutes and first 10 kilometers
   let payment = 1700
@@ -88,6 +101,9 @@ export function calculateDrinkAndDrivePayment(
   if (isDropOutOfColombo) {
     payment += 500
   }
+
+  // Add waiting charges
+  payment += waitingCharges
 
   return payment
 }
