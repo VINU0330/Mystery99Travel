@@ -21,11 +21,10 @@ export default function Login() {
   const router = useRouter()
   const { login, currentUser } = useAuth()
 
-  // Check if user is already logged in
+  // Redirect if already logged in
   useEffect(() => {
     if (currentUser) {
-      console.log("User already logged in, redirecting to service-selection")
-      router.push("/service-selection")
+      router.replace("/service-selection")
     }
   }, [currentUser, router])
 
@@ -36,12 +35,7 @@ export default function Login() {
 
     try {
       await login(email, password)
-      console.log("Login successful, redirecting to service-selection")
-
-      // Force navigation after successful login
-      setTimeout(() => {
-        router.push("/service-selection")
-      }, 500)
+      // Navigation will be handled by the useEffect above when currentUser changes
     } catch (error: any) {
       console.error("Login error:", error)
 
@@ -64,6 +58,19 @@ export default function Login() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Don't render the login form if user is already logged in
+  if (currentUser) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <CardContainer>
+          <div className="text-center">
+            <p>Redirecting to dashboard...</p>
+          </div>
+        </CardContainer>
+      </div>
+    )
   }
 
   return (
@@ -101,6 +108,7 @@ export default function Login() {
                 placeholder="Enter your email"
                 required
                 className="h-11"
+                disabled={isLoading}
               />
             </div>
 
@@ -116,6 +124,7 @@ export default function Login() {
                 placeholder="Enter your password"
                 required
                 className="h-11"
+                disabled={isLoading}
               />
             </div>
 

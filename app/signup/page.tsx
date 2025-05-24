@@ -22,11 +22,10 @@ export default function Signup() {
   const router = useRouter()
   const { signup, currentUser } = useAuth()
 
-  // Check if user is already logged in
+  // Redirect if already logged in
   useEffect(() => {
     if (currentUser) {
-      console.log("User already logged in, redirecting to service-selection")
-      router.push("/service-selection")
+      router.replace("/service-selection")
     }
   }, [currentUser, router])
 
@@ -50,12 +49,7 @@ export default function Signup() {
 
     try {
       await signup(email, password)
-      console.log("Signup successful, redirecting to service-selection")
-
-      // Force navigation after successful signup
-      setTimeout(() => {
-        router.push("/service-selection")
-      }, 500)
+      // Navigation will be handled by the useEffect above when currentUser changes
     } catch (error: any) {
       console.error("Signup error:", error)
 
@@ -74,6 +68,19 @@ export default function Signup() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Don't render the signup form if user is already logged in
+  if (currentUser) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <CardContainer>
+          <div className="text-center">
+            <p>Redirecting to dashboard...</p>
+          </div>
+        </CardContainer>
+      </div>
+    )
   }
 
   return (
@@ -111,6 +118,7 @@ export default function Signup() {
                 placeholder="Enter your email"
                 required
                 className="h-11"
+                disabled={isLoading}
               />
             </div>
 
@@ -126,6 +134,7 @@ export default function Signup() {
                 placeholder="Create a password (min 6 characters)"
                 required
                 className="h-11"
+                disabled={isLoading}
               />
             </div>
 
@@ -141,6 +150,7 @@ export default function Signup() {
                 placeholder="Confirm your password"
                 required
                 className="h-11"
+                disabled={isLoading}
               />
             </div>
 
