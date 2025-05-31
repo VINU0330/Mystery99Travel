@@ -114,15 +114,15 @@ export function calculateDayTimeServicePayment(durationMinutes: number) {
 
   // Day time service pricing tiers
   if (durationHours <= 4) {
-    return 2400 // 4 hours
+    return 3000 // 4 hours
   } else if (durationHours <= 6) {
-    return 3000 // 6 hours
+    return 4500 // 6 hours
   } else if (durationHours <= 8) {
-    return 3400 // 8 hours
+    return 6000 // 8 hours
   } else if (durationHours <= 10) {
-    return 4000 // 10 hours
+    return 6500 // 10 hours
   } else if (durationHours <= 12) {
-    return 5000 // 12 hours
+    return 7000 // 12 hours
   } else {
     // For durations beyond 12 hours, add 500 per additional hour
     const additionalHours = durationHours - 12
