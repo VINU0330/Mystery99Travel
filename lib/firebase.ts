@@ -1,6 +1,6 @@
-import { initializeApp } from "firebase/app"
-import { getAuth } from "firebase/auth"
-import { getFirestore } from "firebase/firestore"
+import { initializeApp, getApps } from "firebase/app"
+import { getAuth, connectAuthEmulator } from "firebase/auth"
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore"
 
 // Firebase configuration using environment variables
 const firebaseConfig = {
@@ -12,14 +12,51 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig)
+// Initialize Firebase only if it hasn't been initialized already
+let app
+if (getApps().length === 0) {
+  app = initializeApp(firebaseConfig)
+} else {
+  app = getApps()[0]
+}
 
 // Initialize Firebase Authentication
-const auth = getAuth(app)
+let auth
+try {
+  auth = getAuth(app)
+
+  // Only connect to emulator in development and if not already connected
+  if (process.env.NODE_ENV === "development" && !auth.config.emulator) {
+    try {
+      connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true })
+    } catch (error) {
+      // Emulator connection failed, continue with production auth
+      console.log("Auth emulator not available, using production auth")
+    }
+  }
+} catch (error) {
+  console.error("Error initializing Firebase Auth:", error)
+  throw error
+}
 
 // Initialize Cloud Firestore
-const db = getFirestore(app)
+let db
+try {
+  db = getFirestore(app)
+
+  // Only connect to emulator in development and if not already connected
+  if (process.env.NODE_ENV === "development") {
+    try {
+      connectFirestoreEmulator(db, "localhost", 8080)
+    } catch (error) {
+      // Emulator connection failed, continue with production firestore
+      console.log("Firestore emulator not available, using production firestore")
+    }
+  }
+} catch (error) {
+  console.error("Error initializing Firestore:", error)
+  throw error
+}
 
 export { auth, db }
 export default app

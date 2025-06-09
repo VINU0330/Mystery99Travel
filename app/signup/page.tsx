@@ -20,7 +20,7 @@ export default function Signup() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
-  const { signup, currentUser } = useAuth()
+  const { signup, currentUser, loading, authReady } = useAuth()
 
   // Redirect if already logged in
   useEffect(() => {
@@ -32,6 +32,11 @@ export default function Signup() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+
+    if (!authReady) {
+      setError("Authentication service is not ready. Please wait a moment and try again.")
+      return
+    }
 
     // Validate passwords match
     if (password !== confirmPassword) {
@@ -62,12 +67,28 @@ export default function Signup() {
         setError("Password is too weak. Please use a stronger password.")
       } else if (error.code === "auth/network-request-failed") {
         setError("Network error. Please check your internet connection.")
+      } else if (error.message?.includes("not ready")) {
+        setError("Authentication service is starting up. Please wait a moment and try again.")
       } else {
         setError("Failed to create an account. Please try again.")
       }
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Show loading while auth is initializing
+  if (loading || !authReady) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <CardContainer>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">{loading ? "Loading..." : "Initializing authentication..."}</p>
+          </div>
+        </CardContainer>
+      </div>
+    )
   }
 
   // Don't render the signup form if user is already logged in
@@ -98,6 +119,13 @@ export default function Signup() {
             <p className="text-gray-500 mt-1">Sign up to get started</p>
           </div>
 
+          {!authReady && (
+            <Alert className="mb-4 bg-amber-50 border-amber-200 text-amber-700">
+              <AlertCircle className="h-4 w-4 mr-2" />
+              <AlertDescription>Authentication service is initializing. Please wait a moment.</AlertDescription>
+            </Alert>
+          )}
+
           {error && (
             <Alert className="mb-4 bg-red-50 border-red-200 text-red-700" variant="destructive">
               <AlertCircle className="h-4 w-4 mr-2" />
@@ -118,7 +146,7 @@ export default function Signup() {
                 placeholder="Enter your email"
                 required
                 className="h-11"
-                disabled={isLoading}
+                disabled={isLoading || !authReady}
               />
             </div>
 
@@ -134,7 +162,7 @@ export default function Signup() {
                 placeholder="Create a password (min 6 characters)"
                 required
                 className="h-11"
-                disabled={isLoading}
+                disabled={isLoading || !authReady}
               />
             </div>
 
@@ -150,14 +178,14 @@ export default function Signup() {
                 placeholder="Confirm your password"
                 required
                 className="h-11"
-                disabled={isLoading}
+                disabled={isLoading || !authReady}
               />
             </div>
 
             <Button
               type="submit"
               className="w-full h-11 bg-primary-600 hover:bg-primary-700 text-white"
-              disabled={isLoading}
+              disabled={isLoading || !authReady}
             >
               {isLoading ? "Creating Account..." : "Create Account"}
             </Button>

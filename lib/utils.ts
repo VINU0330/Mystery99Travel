@@ -5,142 +5,126 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// Format time from seconds to HH:MM:SS
 export function formatTime(seconds: number): string {
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
   const secs = seconds % 60
-
-  let formattedTime = ""
-
-  if (hours > 0) {
-    formattedTime += `${hours}h `
-  }
-
-  if (minutes > 0 || hours > 0) {
-    formattedTime += `${minutes}m `
-  }
-
-  formattedTime += `${secs}s`
-
-  return formattedTime
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
 }
 
-export function formatTimeFromComponents(hours: number, minutes: number, seconds: number): string {
-  let formattedTime = ""
-
-  if (hours > 0) {
-    formattedTime += `${hours}h `
-  }
-
-  if (minutes > 0 || hours > 0) {
-    formattedTime += `${minutes}m `
-  }
-
-  formattedTime += `${seconds}s`
-
-  return formattedTime
-}
-
-// Calculate waiting time charges
+// Calculate waiting charges for drink and drive service
+// First 15 minutes free, then Rs.300 per 15 minutes
 export function calculateWaitingCharges(waitingTimeSeconds: number): number {
-  // First 15 minutes (900 seconds) are free
   if (waitingTimeSeconds <= 900) {
+    // 15 minutes = 900 seconds
     return 0
   }
 
-  // After first 15 minutes, charge Rs. 300 for every 15 minutes or part thereof
-  const chargeable15MinBlocks = Math.ceil((waitingTimeSeconds - 900) / 900)
-  return chargeable15MinBlocks * 300
+  const extraSeconds = waitingTimeSeconds - 900
+  const extra15MinuteBlocks = Math.ceil(extraSeconds / 900) // 900 seconds = 15 minutes
+  return extra15MinuteBlocks * 300
 }
 
+// Calculate payment for drink and drive service
 export function calculateDrinkAndDrivePayment(
   distance: number,
   durationMinutes: number,
   isPickupOutOfColombo: boolean,
   isDropOutOfColombo: boolean,
-  waitingCharges = 0,
-) {
-  // Base package: LKR 1700 for first 55 minutes and first 10 kilometers
-  let payment = 1700
+  waitingCharges: number,
+): number {
+  let basePayment = 0
 
-  // Package rate based on duration
-  if (durationMinutes > 55) {
-    payment = 2400 // After first 55 minutes
+  // Base charge: Rs.2000 for first 10km or first 2 hours, whichever is higher
+  const baseDistance = 10
+  const baseDuration = 120 // 2 hours in minutes
 
-    if (durationMinutes > 110) {
-      payment = 3100 // After next 55 minutes
+  if (distance <= baseDistance && durationMinutes <= baseDuration) {
+    basePayment = 2000
+  } else {
+    basePayment = 2000
 
-      if (durationMinutes > 165) {
-        payment = 3700 // After next 55 minutes
+    // Additional distance charges: Rs.100 per km after 10km
+    if (distance > baseDistance) {
+      basePayment += (distance - baseDistance) * 100
+    }
 
-        if (durationMinutes > 220) {
-          payment = 4400 // After next 55 minutes
-
-          if (durationMinutes > 275) {
-            payment = 5500 // After next 55 minutes
-
-            // After this package, LKR 500 will be added for every next hour
-            const additionalHours = Math.floor((durationMinutes - 275) / 60)
-            payment += additionalHours * 500
-          }
-        }
-      }
+    // Additional time charges: Rs.50 per minute after 2 hours
+    if (durationMinutes > baseDuration) {
+      basePayment += (durationMinutes - baseDuration) * 50
     }
   }
 
-  // Additional charge for distance beyond 10km
-  if (distance > 10) {
-    payment += (distance - 10) * 100
-  }
-
-  // Additional charge for out of Colombo area
+  // Area charges
+  let areaCharges = 0
   if (isPickupOutOfColombo) {
-    payment += 500
+    areaCharges += 500
   }
-
   if (isDropOutOfColombo) {
-    payment += 500
+    areaCharges += 500
   }
 
-  // Add waiting charges
-  payment += waitingCharges
-
-  return payment
+  return basePayment + areaCharges + waitingCharges
 }
 
-export function calculateDayTimeServicePayment(durationMinutes: number) {
+// Calculate payment for day time service with updated pricing
+export function calculateDayTimeServicePayment(durationMinutes: number, isOutOfColombo = false): number {
   // Convert minutes to hours (rounded up)
   const durationHours = Math.ceil(durationMinutes / 60)
 
-  // Day time service pricing tiers
+  // Base pricing structure
+  let basePayment = 0
   if (durationHours <= 4) {
-    return 3000 // 4 hours
-  } else if (durationHours <= 6) {
-    return 4500 // 6 hours
-  } else if (durationHours <= 8) {
-    return 6000 // 8 hours
-  } else if (durationHours <= 10) {
-    return 6500 // 10 hours
-  } else if (durationHours <= 12) {
-    return 7000 // 12 hours
+    basePayment = 3000
+  } else if (durationHours === 5) {
+    basePayment = 3400
+  } else if (durationHours === 6) {
+    basePayment = 3800
+  } else if (durationHours === 7) {
+    basePayment = 4200
+  } else if (durationHours === 8) {
+    basePayment = 4600
+  } else if (durationHours === 9) {
+    basePayment = 5000
+  } else if (durationHours === 10) {
+    basePayment = 5400
+  } else if (durationHours === 11) {
+    basePayment = 5800
+  } else if (durationHours === 12) {
+    basePayment = 6000
   } else {
-    // For durations beyond 12 hours, add 500 per additional hour
+    // After 12 hours: 6000 + 500 per additional hour
     const additionalHours = durationHours - 12
-    return 5000 + additionalHours * 500
+    basePayment = 6000 + additionalHours * 500
   }
+
+  // Add Rs.300 if out of Colombo area
+  if (isOutOfColombo) {
+    basePayment += 300
+  }
+
+  return basePayment
 }
 
-export function calculateVehicleDeliveryPayment(endLocationArea: string) {
+// Calculate payment for day time long service
+export function calculateDayTimeLongServicePayment(days: number): number {
+  // Fixed rate of Rs.5500 per day
+  return days * 5500
+}
+
+// Calculate payment for vehicle delivery service
+export function calculateVehicleDeliveryPayment(endLocationArea: string): number {
   switch (endLocationArea) {
     case "colombo-1-5":
-      return 2500
+      return 1500 // Colombo 1 to 5
     case "colombo-area":
-      return 3000
+      return 2000 // Colombo Area
     case "western-province":
-      return 5000
+      return 3000 // Western Province
     case "island-wide":
-      return 7500
+      return 5000 // Island Wide
     default:
-      return 2500 // Default to lowest rate
+      return 1500 // Default to lowest rate
   }
 }

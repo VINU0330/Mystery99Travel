@@ -1,4 +1,3 @@
-import { db } from "@/lib/firebase"
 import { collection, addDoc, getDocs, query, where, orderBy, Timestamp } from "firebase/firestore"
 
 export interface TripData {
@@ -15,8 +14,10 @@ export interface TripData {
   tripDuration: string
   elapsedTime: number
   waitingTime?: number
+  waitingTimeSeconds?: number
   waitingCharges?: number
   basePayment?: number
+  foodCharges?: number
   totalPayment: number
   companyCommission: number
   driverPayment: number
@@ -40,6 +41,9 @@ const removeUndefined = (obj: Record<string, any>) => {
 
 export const saveTrip = async (tripData: Omit<TripData, "createdAt">) => {
   try {
+    // Dynamic import to avoid SSR issues
+    const { db } = await import("@/lib/firebase")
+
     // Remove undefined values to prevent Firestore errors
     const cleanedData = removeUndefined(tripData)
 
@@ -57,6 +61,9 @@ export const saveTrip = async (tripData: Omit<TripData, "createdAt">) => {
 
 export const getUserTrips = async (userId: string) => {
   try {
+    // Dynamic import to avoid SSR issues
+    const { db } = await import("@/lib/firebase")
+
     try {
       // First attempt: Try with the composite index if it exists
       const q = query(collection(db, "trips"), where("userId", "==", userId), orderBy("createdAt", "desc"))
