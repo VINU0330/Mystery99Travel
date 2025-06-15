@@ -7,5 +7,14 @@ interface CardContainerProps {
 }
 
 export function CardContainer({ children, className }: CardContainerProps) {
-  return <div className={cn("bg-white rounded-lg shadow-sm p-6 md:p-8", className)}>{children}</div>
+  return (
+    <div
+      className={cn(
+        "bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6 md:p-8",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  )
 }

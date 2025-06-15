@@ -127,6 +127,9 @@ export default function RideCalculator() {
   ])
   const [foodCharges, setFoodCharges] = useState(0)
 
+  // Add a new state variable for the "Convert into Long Ride" checkbox after the food charges state
+  const [convertToLongRide, setConvertToLongRide] = useState(false)
+
   // Timer reference
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -517,7 +520,24 @@ export default function RideCalculator() {
       setTempAreaCharges(areaCharges)
     } else if (serviceType === "day-time") {
       const isOutOfColombo = pickupArea === "out-colombo" || dropArea === "out-colombo"
-      const basePayment = calculateDayTimeServicePayment(durationMinutes, isOutOfColombo)
+
+      if (convertToLongRide) {
+        // Calculate hours (rounded up)
+        const durationHours = Math.ceil(elapsedTime / 3600)
+
+        // Base rate is 5500 for up to 12 hours
+        let basePay = 5500
+
+        // Add 500 for each additional hour beyond 12
+        if (durationHours > 12) {
+          basePay += (durationHours - 12) * 500
+        }
+
+        basePayment = basePay
+      } else {
+        basePayment = calculateDayTimeServicePayment(durationMinutes, isOutOfColombo)
+      }
+
       payment = basePayment + foodCharges
       setTempBasePayment(basePayment)
     } else if (serviceType === "day-time-long") {
@@ -606,9 +626,41 @@ export default function RideCalculator() {
         setDistanceCharges(distanceCharge)
         setAreaCharges(areaCharge)
       } else if (serviceType === "day-time") {
-        const isOutOfColombo = pickupArea === "out-colombo" || dropArea === "out-colombo"
-        payment = calculateDayTimeServicePayment(durationMinutes, isOutOfColombo) + foodCharges
-        setBasePayment(calculateDayTimeServicePayment(durationMinutes, isOutOfColombo))
+        if (convertToLongRide) {
+          // Calculate hours (rounded up)
+          const durationHours = Math.ceil(finalElapsedTime > 0 ? finalElapsedTime / 3600 : elapsedTime / 3600)
+
+          // Base rate is 5500 for up to 12 hours
+          let basePay = 5500
+
+          // Add 500 for each additional hour beyond 12
+          if (durationHours > 12) {
+            basePay += (durationHours - 12) * 500
+          }
+
+          setBasePayment(basePay)
+          payment = basePay + foodCharges
+          setTotalPayment(payment)
+
+          // For long ride conversion: 15% commission on base amount (excluding food)
+          const commission = Math.round(basePay * 0.15)
+          const driverPay = Math.round(basePay * 0.85) + foodCharges
+          setCompanyCommission(commission)
+          setDriverPayment(driverPay)
+        } else {
+          // Original day time calculation
+          const isOutOfColombo = pickupArea === "out-colombo" || dropArea === "out-colombo"
+          const basePay = calculateDayTimeServicePayment(durationMinutes, isOutOfColombo)
+          setBasePayment(basePay)
+          payment = basePay + foodCharges
+          setTotalPayment(payment)
+
+          // Regular day time: 15% commission on base amount (excluding food)
+          const commission = Math.round(basePay * 0.15)
+          const driverPay = Math.round(basePay * 0.85) + foodCharges
+          setCompanyCommission(commission)
+          setDriverPayment(driverPay)
+        }
       } else if (serviceType === "vehicle-delivery") {
         payment = calculateVehicleDeliveryPayment(endLocationArea)
         setBasePayment(payment)
@@ -617,13 +669,8 @@ export default function RideCalculator() {
       setTotalPayment(payment)
 
       // Update commission calculation based on service type
-      if (serviceType === "day-time") {
-        setCompanyCommission(payment * 0.15) // 15% commission for day time
-        setDriverPayment(payment * 0.85) // 85% for driver
-      } else {
-        setCompanyCommission(payment * 0.2) // 20% commission for other services
-        setDriverPayment(payment * 0.8) // 80% for driver
-      }
+      // Commission calculation is already handled within each service type block above
+      // No additional calculation needed here
 
       // Ensure timer is completely stopped
       if (timerRef.current) {
@@ -1023,6 +1070,20 @@ export default function RideCalculator() {
 
                     <div className="font-medium">Rate per Day</div>
                     <div className="text-right">Rs.5,500</div>
+
+                    <div className="font-medium">Start Time</div>
+                    <div className="text-right">{pickupTime || "Not set"}</div>
+
+                    <div className="font-medium">End Time</div>
+                    <div className="text-right">
+                      {tripEndTime
+                        ? new Date(tripEndTime).toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          })
+                        : "Not set"}
+                    </div>
                   </div>
 
                   <div className="bg-primary-50 rounded-lg p-4 text-center mt-4">
@@ -1344,6 +1405,19 @@ export default function RideCalculator() {
                   </div>
                 )}
 
+                {serviceType === "day-time" && (
+                  <div className="flex items-center space-x-2 my-4 p-3 bg-blue-50 rounded-md border border-blue-200">
+                    <Checkbox
+                      id="convert-to-long-ride"
+                      checked={convertToLongRide}
+                      onCheckedChange={(checked) => setConvertToLongRide(checked as boolean)}
+                    />
+                    <label htmlFor="convert-to-long-ride" className="text-sm cursor-pointer text-blue-800 font-medium">
+                      Convert into Long Ride (Rs.5500 for up to 12 hours)
+                    </label>
+                  </div>
+                )}
+
                 <Button
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={handleShowTempCalculation}
@@ -1372,13 +1446,6 @@ export default function RideCalculator() {
                           </label>
                         </div>
                       ))}
-                      {foodCharges > 0 && (
-                        <div className="mt-2 p-2 bg-orange-100 rounded border border-orange-300">
-                          <p className="text-sm font-medium text-orange-800">
-                            Total Food Charges: Rs.{foodCharges.toLocaleString()}
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
@@ -1432,6 +1499,20 @@ export default function RideCalculator() {
 
                       <div className="font-medium">Drop Location</div>
                       <div className="text-right">{dropLocation}</div>
+
+                      <div className="font-medium">Start Time</div>
+                      <div className="text-right">{pickupTime}</div>
+
+                      <div className="font-medium">End Time</div>
+                      <div className="text-right">
+                        {tripEndTime
+                          ? new Date(tripEndTime).toLocaleTimeString("en-US", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: false,
+                            })
+                          : "Not set"}
+                      </div>
                     </div>
 
                     <div className="mt-4 space-y-2 border-t pt-4">
@@ -1496,6 +1577,20 @@ export default function RideCalculator() {
 
                     <div className="font-medium">Drop Location</div>
                     <div className="text-right">{dropLocation}</div>
+
+                    <div className="font-medium">Start Time</div>
+                    <div className="text-right">{pickupTime}</div>
+
+                    <div className="font-medium">End Time</div>
+                    <div className="text-right">
+                      {tripEndTime
+                        ? new Date(tripEndTime).toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          })
+                        : "Not set"}
+                    </div>
                   </div>
                 )}
 
@@ -1624,10 +1719,24 @@ export default function RideCalculator() {
                     <div className="font-medium">Total Payment</div>
                     <div className="text-right">Rs.{totalPayment.toLocaleString()}</div>
 
-                    <div className="font-medium">Company Commission ({serviceType === "day-time" ? "15%" : "20%"})</div>
+                    {serviceType === "day-time" && foodCharges > 0 && (
+                      <>
+                        <div className="font-medium">Base Payment</div>
+                        <div className="text-right">Rs.{basePayment.toLocaleString()}</div>
+
+                        <div className="font-medium">Food Charges</div>
+                        <div className="text-right">Rs.{foodCharges.toLocaleString()}</div>
+                      </>
+                    )}
+
+                    <div className="font-medium">
+                      Company Commission ({serviceType === "day-time" ? "15% of base" : "20%"})
+                    </div>
                     <div className="text-right">Rs.{companyCommission.toLocaleString()}</div>
 
-                    <div className="font-medium">Driver Payment ({serviceType === "day-time" ? "85%" : "80%"})</div>
+                    <div className="font-medium">
+                      Driver Payment {serviceType === "day-time" ? "(85% of base + food charges)" : "(80%)"}
+                    </div>
                     <div className="text-right">Rs.{driverPayment.toLocaleString()}</div>
                   </div>
                 )}

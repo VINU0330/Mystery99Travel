@@ -16,7 +16,7 @@ import { AlertCircle, CalendarIcon, Download, Filter } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import jsPDF from "jspdf"
-import "jspdf-autotable"
+import autoTable from "jspdf-autotable"
 import { Input } from "@/components/ui/input"
 
 // Extend jsPDF type to include autoTable
@@ -205,22 +205,22 @@ export default function Reports() {
       trip.tripId,
       trip.date,
       trip.service,
-      trip.pickupLocation,
-      trip.dropLocation,
+      trip.pickupLocation.length > 15 ? trip.pickupLocation.substring(0, 15) + "..." : trip.pickupLocation,
+      trip.dropLocation.length > 15 ? trip.dropLocation.substring(0, 15) + "..." : trip.dropLocation,
       trip.waitingTime,
       trip.totalDistance,
       trip.totalTripTime,
       `Rs.${trip.totalPayment.toLocaleString()}`,
       `Rs.${trip.driverCommission.toLocaleString()}`,
       `Rs.${trip.companyCommission.toLocaleString()}`,
-      trip.customerName,
+      trip.customerName.length > 10 ? trip.customerName.substring(0, 10) + "..." : trip.customerName,
       trip.customerPhone,
       trip.paymentMethod,
       trip.status,
     ])
 
-    // Add table
-    doc.autoTable({
+    // Add table using autoTable
+    autoTable(doc, {
       head: [
         [
           "Trip ID",
@@ -228,39 +228,40 @@ export default function Reports() {
           "Service",
           "Pickup",
           "Drop",
-          "Waiting Time",
+          "Waiting",
           "Distance",
-          "Trip Time",
-          "Total Payment",
-          "Driver Commission",
-          "Company Commission",
+          "Duration",
+          "Payment",
+          "Driver",
+          "Company",
           "Customer",
           "Phone",
-          "Payment",
+          "Method",
           "Status",
         ],
       ],
       body: tableData,
       startY: dateFrom || dateTo ? 65 : 55,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [0, 82, 204] },
+      styles: { fontSize: 6, cellPadding: 1 },
+      headStyles: { fillColor: [0, 82, 204], fontSize: 7 },
       columnStyles: {
-        0: { cellWidth: 15 },
-        1: { cellWidth: 20 },
-        2: { cellWidth: 25 },
-        3: { cellWidth: 25 },
-        4: { cellWidth: 25 },
-        5: { cellWidth: 20 },
-        6: { cellWidth: 20 },
-        7: { cellWidth: 20 },
-        8: { cellWidth: 25 },
-        9: { cellWidth: 25 },
-        10: { cellWidth: 25 },
-        11: { cellWidth: 25 },
-        12: { cellWidth: 20 },
-        13: { cellWidth: 20 },
-        14: { cellWidth: 20 },
+        0: { cellWidth: 12 },
+        1: { cellWidth: 15 },
+        2: { cellWidth: 18 },
+        3: { cellWidth: 18 },
+        4: { cellWidth: 18 },
+        5: { cellWidth: 12 },
+        6: { cellWidth: 12 },
+        7: { cellWidth: 12 },
+        8: { cellWidth: 18 },
+        9: { cellWidth: 18 },
+        10: { cellWidth: 18 },
+        11: { cellWidth: 15 },
+        12: { cellWidth: 15 },
+        13: { cellWidth: 12 },
+        14: { cellWidth: 12 },
       },
+      margin: { left: 5, right: 5 },
     })
 
     // Add summary at the bottom
@@ -269,9 +270,10 @@ export default function Reports() {
     doc.text("Summary", 14, finalY)
 
     doc.setFontSize(12)
-    doc.text(`Total Payments: Rs.${totalPayments.toLocaleString()}`, 14, finalY + 15)
-    doc.text(`Total Driver Commission: Rs.${totalDriverCommission.toLocaleString()}`, 14, finalY + 25)
-    doc.text(`Total Company Commission: Rs.${totalCompanyCommission.toLocaleString()}`, 14, finalY + 35)
+    doc.text(`Total Trips: ${filteredTrips.length}`, 14, finalY + 15)
+    doc.text(`Total Payments: Rs.${totalPayments.toLocaleString()}`, 14, finalY + 25)
+    doc.text(`Total Driver Commission: Rs.${totalDriverCommission.toLocaleString()}`, 14, finalY + 35)
+    doc.text(`Total Company Commission: Rs.${totalCompanyCommission.toLocaleString()}`, 14, finalY + 45)
 
     // Save the PDF
     const fileName = `trip-report-${format(new Date(), "yyyy-MM-dd")}.pdf`

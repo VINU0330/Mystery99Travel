@@ -29,23 +29,23 @@
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 215 28% 17%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 215 28% 17%;
     --popover-foreground: 210 40% 98%;
     --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 215 25% 27%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
+    --muted: 215 25% 27%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
+    --accent: 215 25% 27%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.5% 48%;
+    --border: 215 25% 27%;
+    --input: 215 25% 27%;
+    --ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -116,4 +116,186 @@
   .responsive-grid {
     @apply grid-cols-3;
   }
+}
+
+/* Dark mode specific adjustments */
+.dark {
+  /* Main background - very dark blue */
+  background-color: rgb(15 23 42); /* slate-900 */
+}
+
+.dark .bg-gray-50 {
+  @apply bg-slate-900;
+}
+
+.dark .bg-white {
+  @apply bg-slate-800;
+}
+
+.dark .text-gray-600 {
+  @apply text-slate-300;
+}
+
+.dark .text-gray-700 {
+  @apply text-slate-200;
+}
+
+.dark .text-gray-800 {
+  @apply text-white;
+}
+
+.dark .text-gray-500 {
+  @apply text-slate-400;
+}
+
+.dark .border-gray-200 {
+  @apply border-slate-700;
+}
+
+.dark .hover\:bg-gray-50:hover {
+  @apply bg-slate-700;
+}
+
+.dark .hover\:bg-gray-100:hover {
+  @apply bg-slate-700;
+}
+
+.dark .bg-gray-100 {
+  @apply bg-slate-700;
+}
+
+.dark .bg-gray-200 {
+  @apply bg-slate-600;
+}
+
+/* Dark mode input fields */
+.dark input[type="text"],
+.dark input[type="email"],
+.dark input[type="password"],
+.dark input[type="number"],
+.dark textarea,
+.dark select {
+  @apply bg-slate-900 border-slate-600 text-white placeholder-slate-400;
+}
+
+.dark input[type="text"]:focus,
+.dark input[type="email"]:focus,
+.dark input[type="password"]:focus,
+.dark input[type="number"]:focus,
+.dark textarea:focus,
+.dark select:focus {
+  @apply border-blue-500 ring-blue-500;
+}
+
+/* Dark mode summary cards */
+.dark .bg-gradient-to-br.from-primary-50.to-primary-100 {
+  @apply from-blue-900/50 to-blue-800/50 border-blue-500;
+}
+
+.dark .bg-gradient-to-br.from-green-50.to-green-100 {
+  @apply from-green-900/50 to-green-800/50 border-green-500;
+}
+
+.dark .bg-gradient-to-br.from-amber-50.to-amber-100 {
+  @apply from-amber-900/50 to-amber-800/50 border-amber-500;
+}
+
+/* Dark mode alerts */
+.dark .bg-blue-50 {
+  @apply bg-blue-900/20 border-blue-700;
+}
+
+.dark .bg-green-50 {
+  @apply bg-green-900/20 border-green-700;
+}
+
+.dark .bg-amber-50 {
+  @apply bg-amber-900/20 border-amber-700;
+}
+
+.dark .bg-red-50 {
+  @apply bg-red-900/20 border-red-700;
+}
+
+.dark .bg-orange-50 {
+  @apply bg-orange-900/20 border-orange-700;
+}
+
+.dark .text-blue-800 {
+  @apply text-blue-200;
+}
+
+.dark .text-green-800 {
+  @apply text-green-200;
+}
+
+.dark .text-amber-800 {
+  @apply text-amber-200;
+}
+
+.dark .text-red-700 {
+  @apply text-red-200;
+}
+
+.dark .text-orange-800 {
+  @apply text-orange-200;
+}
+
+/* Dark mode table */
+.dark table {
+  @apply border-slate-700;
+}
+
+.dark th {
+  @apply text-slate-300 border-slate-700;
+}
+
+.dark td {
+  @apply border-slate-700;
+}
+
+.dark tr:hover {
+  @apply bg-slate-700/50;
+}
+
+/* Dark mode status badges */
+.dark .bg-green-100 {
+  @apply bg-green-900/30 text-green-300;
+}
+
+.dark .bg-amber-100 {
+  @apply bg-amber-900/30 text-amber-300;
+}
+
+/* Dark mode primary colors */
+.dark .text-primary-600 {
+  @apply text-blue-400;
+}
+
+.dark .bg-primary-50 {
+  @apply bg-blue-900/20;
+}
+
+/* Dark mode form elements */
+.dark .bg-gray-50 {
+  @apply bg-slate-900 text-white;
+}
+
+/* Dark mode select dropdowns */
+.dark [data-radix-select-content] {
+  @apply bg-slate-800 border-slate-700;
+}
+
+.dark [data-radix-select-item] {
+  @apply text-white hover:bg-slate-700;
+}
+
+/* Dark mode calendar */
+.dark [data-radix-popover-content] {
+  @apply bg-slate-800 border-slate-700;
+}
+
+/* Dark mode dialog */
+.dark [data-radix-dialog-content] {
+  @apply bg-slate-800 border-slate-700;
 }

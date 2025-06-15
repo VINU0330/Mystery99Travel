@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -214,35 +215,42 @@ export default function MainLayout({ children, showHeader = true, title }: MainL
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col">
       {/* Header */}
       {showHeader && (
-        <header className="bg-white shadow-sm sticky top-0 z-10">
+        <header className="bg-white dark:bg-slate-800 shadow-sm sticky top-0 z-10 border-b border-gray-200 dark:border-slate-700">
           <div className="container mx-auto px-4 py-3 flex justify-between items-center">
             <Link href="/service-selection" className="flex items-center space-x-2">
               <img src="/logo.png" alt="Mystery 99" className="h-10" />
-              {!isMobile && <span className="font-semibold text-primary-600">Mystery 99</span>}
+              {!isMobile && <span className="font-semibold text-primary-600 dark:text-blue-400">Mystery 99</span>}
             </Link>
 
-            {title && <h1 className="text-lg font-semibold text-center hidden md:block">{title}</h1>}
+            {title && (
+              <h1 className="text-lg font-semibold text-center hidden md:block text-gray-800 dark:text-white">
+                {title}
+              </h1>
+            )}
 
-            <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} aria-label="Menu">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="3" y1="12" x2="21" y2="12"></line>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <line x1="3" y1="18" x2="21" y2="18"></line>
-              </svg>
-            </Button>
+            <div className="flex items-center space-x-2">
+              <ThemeToggle />
+              <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} aria-label="Menu">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="3" y1="12" x2="21" y2="12"></line>
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+              </Button>
+            </div>
           </div>
         </header>
       )}
@@ -268,12 +276,12 @@ export default function MainLayout({ children, showHeader = true, title }: MainL
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 20 }}
-            className="fixed top-0 right-0 h-full w-64 bg-white shadow-lg z-50"
+            className="fixed top-0 right-0 h-full w-64 bg-white dark:bg-slate-800 shadow-lg z-50 border-l border-gray-200 dark:border-slate-700"
           >
             <div className="flex flex-col h-full">
               {/* User Profile */}
-              <div className="bg-primary-600 p-6 text-center">
-                <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-2 flex items-center justify-center">
+              <div className="bg-primary-600 dark:bg-slate-700 p-6 text-center">
+                <div className="w-16 h-16 bg-gray-200 dark:bg-slate-600 rounded-full mx-auto mb-2 flex items-center justify-center">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -284,7 +292,7 @@ export default function MainLayout({ children, showHeader = true, title }: MainL
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="text-gray-500"
+                    className="text-gray-500 dark:text-slate-300"
                   >
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
@@ -309,8 +317,8 @@ export default function MainLayout({ children, showHeader = true, title }: MainL
                         "flex items-center px-4 py-2 rounded-md transition-colors",
                         pathname === item.path ||
                           (pathname.includes(item.path.split("?")[0]) && item.path.includes(pathname.split("?")[0]))
-                          ? "bg-primary-50 text-primary-600 font-medium"
-                          : "text-gray-700 hover:bg-gray-100",
+                          ? "bg-primary-50 dark:bg-slate-700 text-primary-600 dark:text-blue-400 font-medium"
+                          : "text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700",
                       )}
                     >
                       {getIcon(item.icon)}
@@ -321,10 +329,10 @@ export default function MainLayout({ children, showHeader = true, title }: MainL
               </nav>
 
               {/* Sign Out */}
-              <div className="p-4 border-t">
+              <div className="p-4 border-t border-gray-200 dark:border-slate-700">
                 <button
                   onClick={handleLogout}
-                  className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
+                  className="flex items-center w-full px-4 py-2 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -352,7 +360,9 @@ export default function MainLayout({ children, showHeader = true, title }: MainL
 
       {/* Main Content */}
       <main className="flex-1 container mx-auto px-4 py-6 md:py-8">
-        {title && isMobile && <h1 className="text-xl font-bold text-center mb-6">{title}</h1>}
+        {title && isMobile && (
+          <h1 className="text-xl font-bold text-center mb-6 text-gray-800 dark:text-white">{title}</h1>
+        )}
         <div className="max-w-3xl mx-auto">{children}</div>
       </main>
     </div>
