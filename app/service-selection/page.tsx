@@ -1,18 +1,33 @@
-"use client"
+"use client";
 
-import { useRouter } from "next/navigation"
-import MainLayout from "@/components/layout/main-layout"
-import { Button } from "@/components/ui/button"
-import { motion } from "framer-motion"
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/auth-context";
+import { isAdmin } from "@/services/admin-service";
+import MainLayout from "@/components/layout/main-layout";
+import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 
 export default function ServiceSelection() {
-  const router = useRouter()
+  const router = useRouter();
+  const { currentUser } = useAuth();
+  const [isAdminUser, setIsAdminUser] = useState(false);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (currentUser) {
+        const adminStatus = await isAdmin(currentUser.uid);
+        setIsAdminUser(adminStatus);
+      }
+    };
+    checkAdminStatus();
+  }, [currentUser]);
 
   const handleServiceSelect = (service: string) => {
     // Store the selected service in localStorage for use in the calculator
-    localStorage.setItem("selectedService", service)
-    router.push(`/calculator?service=${service}`)
-  }
+    localStorage.setItem("selectedService", service);
+    router.push(`/calculator?service=${service}`);
+  };
 
   const services = [
     {
@@ -163,10 +178,37 @@ export default function ServiceSelection() {
         </svg>
       ),
     },
-  ]
+  ];
 
   return (
     <MainLayout title="Rider Payment Calculator">
+      {isAdminUser && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="mb-6"
+        >
+          <div className="bg-gradient-to-r from-purple-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold mb-1">Admin Access</h3>
+                <p className="text-blue-100 text-sm">
+                  Manage jobs, view all rides, and more
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                className="bg-white text-blue-600 hover:bg-blue-50 border-0"
+                onClick={() => router.push("/admin")}
+              >
+                Go to Admin Dashboard →
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       <div className="grid grid-cols-1 gap-4">
         {services.map((service) => (
           <motion.div
@@ -182,15 +224,17 @@ export default function ServiceSelection() {
               className="w-full h-auto py-6 flex flex-col items-center justify-center gap-3 bg-white hover:bg-gray-50 border-2 border-gray-200"
               onClick={() => {
                 if (service.id === "payments") {
-                  router.push("/payments")
+                  router.push("/payments");
                 } else if (service.id === "reports") {
-                  router.push("/reports")
+                  router.push("/reports");
                 } else {
-                  handleServiceSelect(service.id)
+                  handleServiceSelect(service.id);
                 }
               }}
             >
-              <div className="bg-primary-50 p-4 rounded-full text-primary-600">{service.icon}</div>
+              <div className="bg-primary-50 p-4 rounded-full text-primary-600">
+                {service.icon}
+              </div>
               <div className="text-center">
                 <h3 className="font-medium text-lg">{service.name}</h3>
                 <p className="text-gray-500 text-sm">{service.description}</p>
@@ -200,5 +244,5 @@ export default function ServiceSelection() {
         ))}
       </div>
     </MainLayout>
-  )
+  );
 }
