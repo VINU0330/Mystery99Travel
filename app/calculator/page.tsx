@@ -75,7 +75,7 @@ export default function RideCalculator() {
   // Service type
   const [serviceType, setServiceType] = useState("drink-and-drive")
 
-  // Step state (0: pickup, 1: dropoff, 2: customer payment, 3: rider payment)
+  // Step state (0: customer details, 1: pickup, 2: dropoff, 3: payment summary)
   const [step, setStep] = useState(0)
 
   // Form data
@@ -244,6 +244,9 @@ export default function RideCalculator() {
     endLocationArea,
     startMeterCount,
     endMeterCount,
+    customerName,
+    phoneNumber,
+    paymentMethod,
     pickupTime,
     tripDuration,
     finalTripDuration,
@@ -352,8 +355,30 @@ export default function RideCalculator() {
     setHasSavedTrip(false)
   }
 
+  // Helper function to send SMS
+  const sendSMS = async (phone: string, message: string) => {
+    try {
+      const response = await fetch("/api/send-sms", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phone,
+          message,
+        }),
+      })
+
+      if (!response.ok) {
+        console.error("Failed to send SMS:", await response.text())
+      }
+    } catch (error) {
+      console.error("Error sending SMS:", error)
+    }
+  }
+
   // Handle pickup marking
-  const handleLocationArrived = () => {
+  const handleLocationArrived = async () => {
     const now = new Date()
     const formattedTime = now.toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -361,6 +386,12 @@ export default function RideCalculator() {
       hour12: false,
     })
     setPickupTime(formattedTime)
+
+    // Send SMS notification to customer
+    if (phoneNumber && customerName) {
+      const message = `Hello ${customerName}, your driver has arrived at the pickup location (${pickupLocation}). Please proceed to the vehicle. Help Hotline: 0779621559`
+      await sendSMS(phoneNumber, message)
+    }
 
     // Start waiting time timer for drink and drive service
     if (serviceType === "drink-and-drive") {
@@ -397,7 +428,21 @@ export default function RideCalculator() {
   }
 
   // Handle trip start
-  const handleStartTrip = () => {
+  const handleStartTrip = async () => {
+    // Send SMS notification to customer
+    if (phoneNumber && customerName) {
+      const rideTypeText = serviceType === "drink-and-drive" 
+        ? "Drink and Drive" 
+        : serviceType === "day-time" 
+        ? "Day Time Service" 
+        : serviceType === "day-time-long"
+        ? "Day Time Long Service"
+        : "Vehicle Delivery"
+      
+      const message = `Hello ${customerName}, your ${rideTypeText} trip has started from ${pickupLocation}. Have a safe journey! Help Hotline: 0779621559`
+      await sendSMS(phoneNumber, message)
+    }
+
     // For day time long service, calculate payment and proceed to customer payment step
     if (serviceType === "day-time-long") {
       const payment = calculateDayTimeLongServicePayment(numberOfDays)
@@ -407,7 +452,7 @@ export default function RideCalculator() {
       setCompanyCommission(500 * numberOfDays)
       setDriverPayment(5000 * numberOfDays)
 
-      setStep(2) // Skip to customer payment step
+      setStep(3) // Skip to payment summary step
       return
     }
 
@@ -461,7 +506,7 @@ export default function RideCalculator() {
         }, 1000)
       }
 
-      setStep(1)
+      setStep(2)
     }
   }
 
@@ -562,7 +607,7 @@ export default function RideCalculator() {
   }
 
   // Handle trip end and calculate payment
-  const handleEndTrip = () => {
+  const handleEndTrip = async () => {
     // Automatically mark as dropped if not already done
     if (!tripEndTime) {
       handleMarkAsDropped()
@@ -577,7 +622,7 @@ export default function RideCalculator() {
       setCompanyCommission(500 * numberOfDays)
       setDriverPayment(5000 * numberOfDays)
 
-      setStep(2)
+      setStep(3)
       return
     }
 
@@ -695,7 +740,37 @@ export default function RideCalculator() {
         setFinalElapsedTime(elapsedTime)
       }
 
-      setStep(2)
+      // Send SMS notification to customer with trip summary
+      if (phoneNumber && customerName) {
+        const rideTypeText = serviceType === "drink-and-drive" 
+          ? "Drink and Drive" 
+          : serviceType === "day-time" 
+          ? "Day Time Service" 
+          : serviceType === "day-time-long"
+          ? "Day Time Long Service"
+          : "Vehicle Delivery"
+        
+        let summaryMessage = `Thank you ${customerName} for using Mystery99 Travel!\n\n`
+        summaryMessage += `${rideTypeText}\n`
+        summaryMessage += `Pickup: ${pickupLocation}\n`
+        summaryMessage += `Drop: ${dropLocation}\n`
+        summaryMessage += `Duration: ${finalTripDuration || tripDuration}\n`
+        
+        if (serviceType === "drink-and-drive" || serviceType === "vehicle-delivery") {
+          summaryMessage += `Distance: ${distance.toFixed(2)} KM\n`
+        }
+        
+        if (serviceType === "drink-and-drive" && waitingTimeSeconds > 0) {
+          summaryMessage += `Waiting Time: ${waitingTimeDisplay}\n`
+        }
+        
+        summaryMessage += `Total: Rs.${payment.toLocaleString()}\n\n`
+        summaryMessage += `We hope you had a safe journey! Help Hotline: 0779621559`
+        
+        await sendSMS(phoneNumber, summaryMessage)
+      }
+
+      setStep(3)
     }
   }
 
@@ -782,7 +857,7 @@ export default function RideCalculator() {
         localStorage.removeItem(`saved_trip_${currentUser.uid}`)
       }
 
-      setStep(3)
+      setStep(4)
     } catch (error) {
       console.error("Error saving trip:", error)
       alert("Failed to save trip data. Please try again.")
@@ -1202,6 +1277,54 @@ export default function RideCalculator() {
     // Regular service flow
     switch (step) {
       case 0:
+        // Customer Details Step
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            <CardContainer>
+              <h3 className="text-lg font-medium mb-4">Customer Details</h3>
+              <p className="text-sm text-gray-600 mb-4">Please enter customer information before starting the trip</p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Customer Name <span className="text-red-500">*</span></label>
+                  <Input
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Enter customer name"
+                    className="h-10"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Phone Number <span className="text-red-500">*</span></label>
+                  <Input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="Enter phone number"
+                    className="h-10"
+                  />
+                </div>
+              </div>
+            </CardContainer>
+
+            <Button
+              className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => setStep(1)}
+              disabled={!customerName.trim() || !phoneNumber.trim()}
+            >
+              Continue to Trip Details
+            </Button>
+          </motion.div>
+        )
+
+      case 1:
+        // Pickup Location Step
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1310,7 +1433,8 @@ export default function RideCalculator() {
           </motion.div>
         )
 
-      case 1:
+      case 2:
+        // Drop Location Step
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1466,7 +1590,8 @@ export default function RideCalculator() {
           </motion.div>
         )
 
-      case 2:
+      case 3:
+        // Payment Summary and Method Selection
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1604,31 +1729,11 @@ export default function RideCalculator() {
             </CardContainer>
 
             <CardContainer>
-              <h3 className="text-lg font-medium mb-4">Customer Details</h3>
+              <h3 className="text-lg font-medium mb-4">Payment Method</h3>
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">Customer Name</label>
-                  <Input
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Enter customer name"
-                    className="h-10"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">Phone Number</label>
-                  <Input
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="Enter phone number"
-                    className="h-10"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium block mb-2">Payment Method</label>
+                  <label className="text-sm font-medium block mb-2">Select Payment Method</label>
                   <div className="flex items-center space-x-6">
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -1665,7 +1770,7 @@ export default function RideCalculator() {
           </motion.div>
         )
 
-      case 3:
+      case 4:
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1759,14 +1864,16 @@ export default function RideCalculator() {
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">
           {step === 0
-            ? serviceType === "day-time-long"
-              ? "Service Details"
-              : "Pickup Details"
+            ? "Customer Details"
             : step === 1
-              ? "Drop-off Details"
+              ? serviceType === "day-time-long"
+                ? "Service Details"
+                : "Pickup Details"
               : step === 2
-                ? "Customer Payment"
-                : "Rider Payment"}
+                ? "Drop-off Details"
+                : step === 3
+                  ? "Payment Summary"
+                  : "Rider Payment"}
         </h2>
         {renderStep()}
 

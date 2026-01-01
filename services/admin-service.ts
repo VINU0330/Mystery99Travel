@@ -18,11 +18,13 @@ export interface AdminUser {
   createdAt: Timestamp | Date;
 }
 
-export interface JobData extends Omit<TripData, "userId" | "createdAt"> {
-  rideType: "airport-transfer" | "city-ride" | "outstation" | "rental";
-  vehicleType?: string;
-  specialInstructions?: string;
-  scheduledTime?: Timestamp | Date;
+export interface JobData {
+  rideType: string;
+  pickupLocation: string;
+  dropLocation: string;
+  customerName: string;
+  phoneNumber: string;
+  createdAt?: Timestamp | Date;
 }
 
 // Check if user is admin
@@ -76,44 +78,16 @@ export const addAdminUser = async (
 };
 
 // Create job manually (admin function)
-export const createJob = async (jobData: JobData, assignedUserId: string) => {
+export const createJob = async (jobData: JobData) => {
   try {
     const { db } = (await import("@/lib/firebase")) as any;
 
-    // Convert JobData to TripData format
-    const tripData: Omit<TripData, "createdAt"> = {
-      userId: assignedUserId,
-      serviceType: jobData.serviceType,
+    const docRef = await addDoc(collection(db, "admin-jobs"), {
+      rideType: jobData.rideType,
       pickupLocation: jobData.pickupLocation,
       dropLocation: jobData.dropLocation,
-      pickupArea: jobData.pickupArea,
-      dropArea: jobData.dropArea,
-      endLocationArea: jobData.endLocationArea,
-      startMeterCount: jobData.startMeterCount,
-      endMeterCount: jobData.endMeterCount,
-      distance: jobData.distance,
-      tripDuration: jobData.tripDuration,
-      elapsedTime: jobData.elapsedTime,
-      waitingTime: jobData.waitingTime,
-      waitingTimeSeconds: jobData.waitingTimeSeconds,
-      waitingCharges: jobData.waitingCharges,
-      basePayment: jobData.basePayment,
-      foodCharges: jobData.foodCharges,
-      totalPayment: jobData.totalPayment,
-      companyCommission: jobData.companyCommission,
-      driverPayment: jobData.driverPayment,
       customerName: jobData.customerName,
       phoneNumber: jobData.phoneNumber,
-      paymentMethod: jobData.paymentMethod,
-      status: jobData.status,
-    };
-
-    const docRef = await addDoc(collection(db, "trips"), {
-      ...tripData,
-      rideType: jobData.rideType,
-      vehicleType: jobData.vehicleType,
-      specialInstructions: jobData.specialInstructions,
-      scheduledTime: jobData.scheduledTime || Timestamp.now(),
       createdAt: Timestamp.now(),
       createdBy: "admin",
     });
@@ -121,6 +95,63 @@ export const createJob = async (jobData: JobData, assignedUserId: string) => {
     return docRef.id;
   } catch (error) {
     console.error("Error creating job:", error);
+    throw error;
+  }
+};
+
+// Get all admin-created jobs
+export const getAllAdminJobs = async () => {
+  try {
+    const { db } = (await import("@/lib/firebase")) as any;
+
+    try {
+      const q = query(
+        collection(db, "admin-jobs"),
+        orderBy("createdAt", "desc")
+      );
+      const querySnapshot = await getDocs(q);
+      const jobs: Array<JobData & { id: string }> = [];
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data() as JobData;
+        jobs.push({
+          ...data,
+          id: doc.id,
+        });
+      });
+
+      return jobs;
+    } catch (indexError) {
+      console.log(
+        "Index error, falling back to client-side sorting:",
+        indexError
+      );
+
+      const querySnapshot = await getDocs(collection(db, "admin-jobs"));
+      const jobs: Array<JobData & { id: string }> = [];
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data() as JobData;
+        jobs.push({
+          ...data,
+          id: doc.id,
+        });
+      });
+
+      return jobs.sort((a, b) => {
+        const dateA =
+          a.createdAt instanceof Date
+            ? a.createdAt.getTime()
+            : a.createdAt?.toDate().getTime() || 0;
+        const dateB =
+          b.createdAt instanceof Date
+            ? b.createdAt.getTime()
+            : b.createdAt?.toDate().getTime() || 0;
+        return dateB - dateA;
+      });
+    }
+  } catch (error) {
+    console.error("Error getting admin jobs:", error);
     throw error;
   }
 };
