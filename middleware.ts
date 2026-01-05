@@ -1,37 +1,56 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
   // Get the path of the request
-  const path = request.nextUrl.pathname
+  const path = request.nextUrl.pathname;
 
   // Define public paths that don't require authentication
-  const isPublicPath = path === "/" || path === "/signup"
+  const isPublicPath = path === "/" || path === "/signup";
+  
+  // Define admin paths
+  const isAdminPath = path.startsWith("/admin");
 
   // Get the session token from cookies
-  const sessionToken = request.cookies.get("auth-session")?.value
+  const sessionToken = request.cookies.get("auth-session")?.value;
 
   // Check if user is authenticated
-  const isAuthenticated = !!sessionToken
+  const isAuthenticated = !!sessionToken;
 
-  console.log(`Middleware - Path: ${path}, Public: ${isPublicPath}, Authenticated: ${isAuthenticated}`)
+  console.log(
+    `Middleware - Path: ${path}, Public: ${isPublicPath}, Authenticated: ${isAuthenticated}`
+  );
+
+  // Admin paths require authentication (admin check happens in the layout)
+  if (isAdminPath && !isAuthenticated) {
+    console.log("Admin path requires authentication, redirecting to login");
+    return NextResponse.redirect(new URL("/", request.url));
+  }
 
   // If the path is not public and user is not authenticated, redirect to login
-  if (!isPublicPath && !isAuthenticated) {
-    console.log("Redirecting to login page")
-    return NextResponse.redirect(new URL("/", request.url))
+  if (!isPublicPath && !isAuthenticated && !isAdminPath) {
+    console.log("Redirecting to login page");
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // If the path is public and user is authenticated, redirect to service selection
   if (isPublicPath && isAuthenticated) {
-    console.log("Redirecting to service selection page")
-    return NextResponse.redirect(new URL("/service-selection", request.url))
+    console.log("Redirecting to service selection page");
+    return NextResponse.redirect(new URL("/service-selection", request.url));
   }
 
-  return NextResponse.next()
+  return NextResponse.next();
 }
 
 // Configure the middleware to run on specific paths
 export const config = {
-  matcher: ["/", "/signup", "/service-selection", "/calculator/:path*", "/payments", "/reports"],
-}
+  matcher: [
+    "/",
+    "/signup",
+    "/service-selection",
+    "/calculator/:path*",
+    "/payments",
+    "/reports",
+    "/admin/:path*",
+  ],
+};

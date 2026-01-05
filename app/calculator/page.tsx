@@ -1,15 +1,21 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { CardContainer } from "@/components/ui/card-container"
-import MainLayout from "@/components/layout/main-layout"
-import { motion } from "framer-motion"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { useState, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { CardContainer } from "@/components/ui/card-container";
+import MainLayout from "@/components/layout/main-layout";
+import { motion } from "framer-motion";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   formatTime,
   calculateDrinkAndDrivePayment,
@@ -17,7 +23,7 @@ import {
   calculateDayTimeLongServicePayment,
   calculateVehicleDeliveryPayment,
   calculateWaitingCharges,
-} from "@/lib/utils"
+} from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -25,175 +31,179 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 
 // Import the necessary functions and hooks
-import { useAuth } from "@/contexts/auth-context"
-import { saveTrip } from "@/services/trip-service"
+import { useAuth } from "@/contexts/auth-context";
+import { saveTrip } from "@/services/trip-service";
 
 // Define the trip state interface for saving/restoring
 interface SavedTripState {
-  userId: string
-  serviceType: string
-  step: number
-  pickupLocation: string
-  dropLocation: string
-  pickupArea: string
-  dropArea: string
-  endLocationArea: string
-  startMeterCount: string
-  endMeterCount: string
-  customerName: string
-  phoneNumber: string
-  paymentMethod: string
-  pickupTime: string
-  tripStartTime: number | null
-  tripEndTime: number | null
-  elapsedTime: number
-  tripDuration: string
-  isTimerRunning: boolean
-  finalTripDuration: string
-  finalElapsedTime: number
-  totalDistance: number
-  totalPayment: number
-  companyCommission: number
-  driverPayment: number
-  lastUpdated: number
-  waitingTimeStart: number | null
-  waitingTimeEnd: number | null
-  waitingTimeSeconds: number
-  waitingTimeCharges: number
-  foodCharges: number
-  numberOfDays: number
+  userId: string;
+  serviceType: string;
+  step: number;
+  pickupLocation: string;
+  dropLocation: string;
+  pickupArea: string;
+  dropArea: string;
+  endLocationArea: string;
+  startMeterCount: string;
+  endMeterCount: string;
+  customerName: string;
+  phoneNumber: string;
+  paymentMethod: string;
+  pickupTime: string;
+  tripStartTime: number | null;
+  tripEndTime: number | null;
+  elapsedTime: number;
+  tripDuration: string;
+  isTimerRunning: boolean;
+  finalTripDuration: string;
+  finalElapsedTime: number;
+  totalDistance: number;
+  totalPayment: number;
+  companyCommission: number;
+  driverPayment: number;
+  lastUpdated: number;
+  waitingTimeStart: number | null;
+  waitingTimeEnd: number | null;
+  waitingTimeSeconds: number;
+  waitingTimeCharges: number;
+  foodCharges: number;
+  numberOfDays: number;
 }
 
 export default function RideCalculator() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const { currentUser } = useAuth()
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { currentUser } = useAuth();
 
   // Service type
-  const [serviceType, setServiceType] = useState("drink-and-drive")
+  const [serviceType, setServiceType] = useState("drink-and-drive");
 
-  // Step state (0: pickup, 1: dropoff, 2: customer payment, 3: rider payment)
-  const [step, setStep] = useState(0)
+  // Step state (0: customer details, 1: pickup, 2: dropoff, 3: payment summary)
+  const [step, setStep] = useState(0);
 
   // Form data
-  const [pickupLocation, setPickupLocation] = useState("")
-  const [dropLocation, setDropLocation] = useState("")
-  const [pickupArea, setPickupArea] = useState("")
-  const [dropArea, setDropArea] = useState("")
-  const [endLocationArea, setEndLocationArea] = useState("")
-  const [startMeterCount, setStartMeterCount] = useState("")
-  const [endMeterCount, setEndMeterCount] = useState("")
-  const [customerName, setCustomerName] = useState("")
-  const [phoneNumber, setPhoneNumber] = useState("")
-  const [paymentMethod, setPaymentMethod] = useState("cash")
-  const [numberOfDays, setNumberOfDays] = useState(1)
+  const [pickupLocation, setPickupLocation] = useState("");
+  const [dropLocation, setDropLocation] = useState("");
+  const [pickupArea, setPickupArea] = useState("");
+  const [dropArea, setDropArea] = useState("");
+  const [endLocationArea, setEndLocationArea] = useState("");
+  const [startMeterCount, setStartMeterCount] = useState("");
+  const [endMeterCount, setEndMeterCount] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [numberOfDays, setNumberOfDays] = useState(1);
 
   // Time tracking
-  const [pickupTime, setPickupTime] = useState("")
-  const [tripStartTime, setTripStartTime] = useState<number | null>(null)
-  const [tripEndTime, setTripEndTime] = useState<number | null>(null)
-  const [elapsedTime, setElapsedTime] = useState(0)
-  const [tripDuration, setTripDuration] = useState("00:00:00")
-  const [isTimerRunning, setIsTimerRunning] = useState(false)
-  const [finalTripDuration, setFinalTripDuration] = useState("")
-  const [finalElapsedTime, setFinalElapsedTime] = useState(0)
+  const [pickupTime, setPickupTime] = useState("");
+  const [tripStartTime, setTripStartTime] = useState<number | null>(null);
+  const [tripEndTime, setTripEndTime] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [tripDuration, setTripDuration] = useState("00:00:00");
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [finalTripDuration, setFinalTripDuration] = useState("");
+  const [finalElapsedTime, setFinalElapsedTime] = useState(0);
 
   // Waiting time tracking
-  const [waitingTimeStart, setWaitingTimeStart] = useState<number | null>(null)
-  const [waitingTimeEnd, setWaitingTimeEnd] = useState<number | null>(null)
-  const [waitingTimeSeconds, setWaitingTimeSeconds] = useState(0)
-  const [waitingTimeDisplay, setWaitingTimeDisplay] = useState("00:00:00")
-  const [waitingTimeCharges, setWaitingTimeCharges] = useState(0)
-  const [isWaitingTimeRunning, setIsWaitingTimeRunning] = useState(false)
-  const waitingTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [waitingTimeStart, setWaitingTimeStart] = useState<number | null>(null);
+  const [waitingTimeEnd, setWaitingTimeEnd] = useState<number | null>(null);
+  const [waitingTimeSeconds, setWaitingTimeSeconds] = useState(0);
+  const [waitingTimeDisplay, setWaitingTimeDisplay] = useState("00:00:00");
+  const [waitingTimeCharges, setWaitingTimeCharges] = useState(0);
+  const [isWaitingTimeRunning, setIsWaitingTimeRunning] = useState(false);
+  const waitingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Payment calculation
-  const [totalDistance, setTotalDistance] = useState(0)
-  const [totalPayment, setTotalPayment] = useState(0)
-  const [basePayment, setBasePayment] = useState(0)
-  const [distanceCharges, setDistanceCharges] = useState(0)
-  const [areaCharges, setAreaCharges] = useState(0)
-  const [companyCommission, setCompanyCommission] = useState(0)
-  const [driverPayment, setDriverPayment] = useState(0)
+  const [totalDistance, setTotalDistance] = useState(0);
+  const [totalPayment, setTotalPayment] = useState(0);
+  const [basePayment, setBasePayment] = useState(0);
+  const [distanceCharges, setDistanceCharges] = useState(0);
+  const [areaCharges, setAreaCharges] = useState(0);
+  const [companyCommission, setCompanyCommission] = useState(0);
+  const [driverPayment, setDriverPayment] = useState(0);
 
   // Food accommodation states (for day time service only)
   const [foodOptions, setFoodOptions] = useState([
     { id: "breakfast", name: "Breakfast", price: 300, selected: false },
     { id: "lunch", name: "Lunch", price: 300, selected: false },
     { id: "dinner", name: "Dinner", price: 300, selected: false },
-  ])
-  const [foodCharges, setFoodCharges] = useState(0)
+  ]);
+  const [foodCharges, setFoodCharges] = useState(0);
 
   // Add a new state variable for the "Convert into Long Ride" checkbox after the food charges state
-  const [convertToLongRide, setConvertToLongRide] = useState(false)
+  const [convertToLongRide, setConvertToLongRide] = useState(false);
 
   // Timer reference
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Add loading state for saving
-  const [isSaving, setIsSaving] = useState(false)
+  const [isSaving, setIsSaving] = useState(false);
 
   // Add state for saved trip alert
-  const [hasSavedTrip, setHasSavedTrip] = useState(false)
-  const [isResumingTrip, setIsResumingTrip] = useState(false)
+  const [hasSavedTrip, setHasSavedTrip] = useState(false);
+  const [isResumingTrip, setIsResumingTrip] = useState(false);
 
   // Add state for temporary amount calculation
-  const [showTempCalculation, setShowTempCalculation] = useState(false)
-  const [tempDistance, setTempDistance] = useState(0)
-  const [tempPayment, setTempPayment] = useState(0)
-  const [tempDuration, setTempDuration] = useState("")
-  const [tempElapsedTime, setTempElapsedTime] = useState(0)
-  const [tempWaitingTime, setTempWaitingTime] = useState("")
-  const [tempWaitingCharges, setTempWaitingCharges] = useState(0)
-  const [tempBasePayment, setTempBasePayment] = useState(0)
-  const [tempDistanceCharges, setTempDistanceCharges] = useState(0)
-  const [tempAreaCharges, setTempAreaCharges] = useState(0)
+  const [showTempCalculation, setShowTempCalculation] = useState(false);
+  const [tempDistance, setTempDistance] = useState(0);
+  const [tempPayment, setTempPayment] = useState(0);
+  const [tempDuration, setTempDuration] = useState("");
+  const [tempElapsedTime, setTempElapsedTime] = useState(0);
+  const [tempWaitingTime, setTempWaitingTime] = useState("");
+  const [tempWaitingCharges, setTempWaitingCharges] = useState(0);
+  const [tempBasePayment, setTempBasePayment] = useState(0);
+  const [tempDistanceCharges, setTempDistanceCharges] = useState(0);
+  const [tempAreaCharges, setTempAreaCharges] = useState(0);
 
   const handleFoodOptionChange = (optionId: string, checked: boolean) => {
-    setFoodOptions((prev) => prev.map((option) => (option.id === optionId ? { ...option, selected: checked } : option)))
-  }
+    setFoodOptions((prev) =>
+      prev.map((option) =>
+        option.id === optionId ? { ...option, selected: checked } : option
+      )
+    );
+  };
 
   // Load service type from URL or localStorage on component mount
   useEffect(() => {
-    const serviceFromUrl = searchParams.get("service")
+    const serviceFromUrl = searchParams.get("service");
     if (serviceFromUrl) {
-      setServiceType(serviceFromUrl)
-      localStorage.setItem("selectedService", serviceFromUrl)
+      setServiceType(serviceFromUrl);
+      localStorage.setItem("selectedService", serviceFromUrl);
     } else {
-      const savedServiceType = localStorage.getItem("selectedService")
+      const savedServiceType = localStorage.getItem("selectedService");
       if (savedServiceType) {
-        setServiceType(savedServiceType)
+        setServiceType(savedServiceType);
       }
     }
-  }, [searchParams])
+  }, [searchParams]);
 
   // Check for saved trip on component mount
   useEffect(() => {
-    if (!currentUser) return
+    if (!currentUser) return;
 
-    const savedTripJson = localStorage.getItem(`saved_trip_${currentUser.uid}`)
+    const savedTripJson = localStorage.getItem(`saved_trip_${currentUser.uid}`);
     if (savedTripJson) {
       try {
-        const savedTrip = JSON.parse(savedTripJson) as SavedTripState
+        const savedTrip = JSON.parse(savedTripJson) as SavedTripState;
 
         // Verify the saved trip belongs to the current user
         if (savedTrip.userId === currentUser.uid) {
-          setHasSavedTrip(true)
+          setHasSavedTrip(true);
         }
       } catch (error) {
-        console.error("Error parsing saved trip:", error)
+        console.error("Error parsing saved trip:", error);
         // Clear invalid saved trip data
-        localStorage.removeItem(`saved_trip_${currentUser.uid}`)
+        localStorage.removeItem(`saved_trip_${currentUser.uid}`);
       }
     }
-  }, [currentUser])
+  }, [currentUser]);
 
   // Save current trip state whenever relevant state changes
   useEffect(() => {
-    if (!currentUser || step === 3) return // Don't save if user is not logged in or trip is completed
+    if (!currentUser || step === 3) return; // Don't save if user is not logged in or trip is completed
 
     // Only save if we've started a trip (step > 0 or pickup time is set)
     if (step > 0 || pickupTime) {
@@ -230,9 +240,12 @@ export default function RideCalculator() {
         waitingTimeCharges,
         foodCharges,
         numberOfDays,
-      }
+      };
 
-      localStorage.setItem(`saved_trip_${currentUser.uid}`, JSON.stringify(tripState))
+      localStorage.setItem(
+        `saved_trip_${currentUser.uid}`,
+        JSON.stringify(tripState)
+      );
     }
   }, [
     currentUser,
@@ -244,6 +257,9 @@ export default function RideCalculator() {
     endLocationArea,
     startMeterCount,
     endMeterCount,
+    customerName,
+    phoneNumber,
+    paymentMethod,
     pickupTime,
     tripDuration,
     finalTripDuration,
@@ -253,187 +269,236 @@ export default function RideCalculator() {
     waitingTimeCharges,
     foodCharges,
     numberOfDays,
-  ])
+  ]);
 
   // Calculate food charges when food options change
   useEffect(() => {
     const totalFoodCharges = foodOptions
       .filter((option) => option.selected)
-      .reduce((sum, option) => sum + option.price, 0)
-    setFoodCharges(totalFoodCharges)
-  }, [foodOptions])
+      .reduce((sum, option) => sum + option.price, 0);
+    setFoodCharges(totalFoodCharges);
+  }, [foodOptions]);
 
   // Function to resume a saved trip
   const resumeSavedTrip = () => {
-    if (!currentUser) return
+    if (!currentUser) return;
 
-    const savedTripJson = localStorage.getItem(`saved_trip_${currentUser.uid}`)
-    if (!savedTripJson) return
+    const savedTripJson = localStorage.getItem(`saved_trip_${currentUser.uid}`);
+    if (!savedTripJson) return;
 
     try {
-      const savedTrip = JSON.parse(savedTripJson) as SavedTripState
+      const savedTrip = JSON.parse(savedTripJson) as SavedTripState;
 
       // Restore all state from saved trip
-      setServiceType(savedTrip.serviceType)
-      setStep(savedTrip.step)
-      setPickupLocation(savedTrip.pickupLocation)
-      setDropLocation(savedTrip.dropLocation)
-      setPickupArea(savedTrip.pickupArea)
-      setDropArea(savedTrip.dropArea)
-      setEndLocationArea(savedTrip.endLocationArea)
-      setStartMeterCount(savedTrip.startMeterCount)
-      setEndMeterCount(savedTrip.endMeterCount)
-      setCustomerName(savedTrip.customerName)
-      setPhoneNumber(savedTrip.phoneNumber)
-      setPaymentMethod(savedTrip.paymentMethod)
-      setPickupTime(savedTrip.pickupTime)
-      setNumberOfDays(savedTrip.numberOfDays || 1)
+      setServiceType(savedTrip.serviceType);
+      setStep(savedTrip.step);
+      setPickupLocation(savedTrip.pickupLocation);
+      setDropLocation(savedTrip.dropLocation);
+      setPickupArea(savedTrip.pickupArea);
+      setDropArea(savedTrip.dropArea);
+      setEndLocationArea(savedTrip.endLocationArea);
+      setStartMeterCount(savedTrip.startMeterCount);
+      setEndMeterCount(savedTrip.endMeterCount);
+      setCustomerName(savedTrip.customerName);
+      setPhoneNumber(savedTrip.phoneNumber);
+      setPaymentMethod(savedTrip.paymentMethod);
+      setPickupTime(savedTrip.pickupTime);
+      setNumberOfDays(savedTrip.numberOfDays || 1);
 
       // Handle timer state
-      setTripStartTime(savedTrip.tripStartTime)
-      setTripEndTime(savedTrip.tripEndTime)
+      setTripStartTime(savedTrip.tripStartTime);
+      setTripEndTime(savedTrip.tripEndTime);
 
       // Restore waiting time state
-      setWaitingTimeStart(savedTrip.waitingTimeStart)
-      setWaitingTimeEnd(savedTrip.waitingTimeEnd)
-      setWaitingTimeSeconds(savedTrip.waitingTimeSeconds)
-      setWaitingTimeCharges(savedTrip.waitingTimeCharges)
-      setWaitingTimeDisplay(formatTime(savedTrip.waitingTimeSeconds))
+      setWaitingTimeStart(savedTrip.waitingTimeStart);
+      setWaitingTimeEnd(savedTrip.waitingTimeEnd);
+      setWaitingTimeSeconds(savedTrip.waitingTimeSeconds);
+      setWaitingTimeCharges(savedTrip.waitingTimeCharges);
+      setWaitingTimeDisplay(formatTime(savedTrip.waitingTimeSeconds));
 
       // If the waiting timer was running, continue it
-      if (savedTrip.waitingTimeStart && !savedTrip.waitingTimeEnd && savedTrip.step === 0) {
-        setIsWaitingTimeRunning(true)
+      if (
+        savedTrip.waitingTimeStart &&
+        !savedTrip.waitingTimeEnd &&
+        savedTrip.step === 0
+      ) {
+        setIsWaitingTimeRunning(true);
       } else {
-        setIsWaitingTimeRunning(false)
+        setIsWaitingTimeRunning(false);
       }
 
       // If the timer was running, calculate the elapsed time including the time since last update
       if (savedTrip.isTimerRunning && savedTrip.tripStartTime) {
         // Calculate how much time has passed since the trip was saved
-        const timePassedSinceSave = Math.floor((Date.now() - savedTrip.lastUpdated) / 1000)
-        const newElapsedTime = savedTrip.elapsedTime + timePassedSinceSave
+        const timePassedSinceSave = Math.floor(
+          (Date.now() - savedTrip.lastUpdated) / 1000
+        );
+        const newElapsedTime = savedTrip.elapsedTime + timePassedSinceSave;
 
-        setElapsedTime(newElapsedTime)
-        setTripDuration(formatTime(newElapsedTime))
-        setIsTimerRunning(true)
+        setElapsedTime(newElapsedTime);
+        setTripDuration(formatTime(newElapsedTime));
+        setIsTimerRunning(true);
       } else {
-        setElapsedTime(savedTrip.elapsedTime)
-        setTripDuration(savedTrip.tripDuration)
-        setIsTimerRunning(savedTrip.isTimerRunning)
+        setElapsedTime(savedTrip.elapsedTime);
+        setTripDuration(savedTrip.tripDuration);
+        setIsTimerRunning(savedTrip.isTimerRunning);
       }
 
-      setFinalTripDuration(savedTrip.finalTripDuration)
-      setFinalElapsedTime(savedTrip.finalElapsedTime)
-      setTotalDistance(savedTrip.totalDistance)
-      setTotalPayment(savedTrip.totalPayment)
-      setCompanyCommission(savedTrip.companyCommission)
-      setDriverPayment(savedTrip.driverPayment)
-      setFoodCharges(savedTrip.foodCharges)
+      setFinalTripDuration(savedTrip.finalTripDuration);
+      setFinalElapsedTime(savedTrip.finalElapsedTime);
+      setTotalDistance(savedTrip.totalDistance);
+      setTotalPayment(savedTrip.totalPayment);
+      setCompanyCommission(savedTrip.companyCommission);
+      setDriverPayment(savedTrip.driverPayment);
+      setFoodCharges(savedTrip.foodCharges);
 
-      setHasSavedTrip(false)
-      setIsResumingTrip(true)
+      setHasSavedTrip(false);
+      setIsResumingTrip(true);
 
       // After a short delay, reset the resuming state
       setTimeout(() => {
-        setIsResumingTrip(false)
-      }, 3000)
+        setIsResumingTrip(false);
+      }, 3000);
     } catch (error) {
-      console.error("Error resuming saved trip:", error)
+      console.error("Error resuming saved trip:", error);
       // Clear invalid saved trip data
-      localStorage.removeItem(`saved_trip_${currentUser.uid}`)
-      setHasSavedTrip(false)
+      localStorage.removeItem(`saved_trip_${currentUser.uid}`);
+      setHasSavedTrip(false);
     }
-  }
+  };
 
   // Function to discard a saved trip
   const discardSavedTrip = () => {
-    if (!currentUser) return
-    localStorage.removeItem(`saved_trip_${currentUser.uid}`)
-    setHasSavedTrip(false)
-  }
+    if (!currentUser) return;
+    localStorage.removeItem(`saved_trip_${currentUser.uid}`);
+    setHasSavedTrip(false);
+  };
+
+  // Helper function to send SMS
+  const sendSMS = async (phone: string, message: string) => {
+    try {
+      const response = await fetch("/api/send-sms", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phone,
+          message,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("Failed to send SMS:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error sending SMS:", error);
+    }
+  };
 
   // Handle pickup marking
-  const handleLocationArrived = () => {
-    const now = new Date()
+  const handleLocationArrived = async () => {
+    const now = new Date();
     const formattedTime = now.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
-    })
-    setPickupTime(formattedTime)
+    });
+    setPickupTime(formattedTime);
+
+    // Send SMS notification to customer
+    if (phoneNumber && customerName) {
+      const message = `Hello ${customerName}, your driver has arrived at the pickup location (${pickupLocation}). Please proceed to the vehicle. Help Hotline: 0779621559`;
+      await sendSMS(phoneNumber, message);
+    }
 
     // Start waiting time timer for drink and drive service
     if (serviceType === "drink-and-drive") {
-      const currentTime = Date.now()
-      setWaitingTimeStart(currentTime)
-      setIsWaitingTimeRunning(true)
+      const currentTime = Date.now();
+      setWaitingTimeStart(currentTime);
+      setIsWaitingTimeRunning(true);
 
       // Start the waiting time timer
-      if (waitingTimerRef.current) clearInterval(waitingTimerRef.current)
+      if (waitingTimerRef.current) clearInterval(waitingTimerRef.current);
       waitingTimerRef.current = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - currentTime) / 1000)
-        setWaitingTimeSeconds(elapsed)
-        setWaitingTimeDisplay(formatTime(elapsed))
+        const elapsed = Math.floor((Date.now() - currentTime) / 1000);
+        setWaitingTimeSeconds(elapsed);
+        setWaitingTimeDisplay(formatTime(elapsed));
 
         // Calculate waiting charges (first 15 minutes free, then 300 per 15 minutes)
-        const charges = calculateWaitingCharges(elapsed)
-        setWaitingTimeCharges(charges)
-      }, 1000)
+        const charges = calculateWaitingCharges(elapsed);
+        setWaitingTimeCharges(charges);
+      }, 1000);
     } else {
       // For other services, start the trip timer immediately
-      setTripStartTime(Date.now())
-      setIsTimerRunning(true)
+      setTripStartTime(Date.now());
+      setIsTimerRunning(true);
 
       // Start the timer
-      if (timerRef.current) clearInterval(timerRef.current)
+      if (timerRef.current) clearInterval(timerRef.current);
       timerRef.current = setInterval(() => {
         if (tripStartTime) {
-          const elapsed = Math.floor((Date.now() - tripStartTime) / 1000)
-          setElapsedTime(elapsed)
-          setTripDuration(formatTime(elapsed))
+          const elapsed = Math.floor((Date.now() - tripStartTime) / 1000);
+          setElapsedTime(elapsed);
+          setTripDuration(formatTime(elapsed));
         }
-      }, 1000)
+      }, 1000);
     }
-  }
+  };
 
   // Handle trip start
-  const handleStartTrip = () => {
+  const handleStartTrip = async () => {
+    // Send SMS notification to customer
+    if (phoneNumber && customerName) {
+      const rideTypeText =
+        serviceType === "drink-and-drive"
+          ? "Drink and Drive"
+          : serviceType === "day-time"
+          ? "Day Time Service"
+          : serviceType === "day-time-long"
+          ? "Day Time Long Service"
+          : "Vehicle Delivery";
+
+      const message = `Hello ${customerName}, your ${rideTypeText} trip has started from ${pickupLocation}. Have a safe journey! Help Hotline: 0779621559`;
+      await sendSMS(phoneNumber, message);
+    }
+
     // For day time long service, calculate payment and proceed to customer payment step
     if (serviceType === "day-time-long") {
-      const payment = calculateDayTimeLongServicePayment(numberOfDays)
-      setTotalPayment(payment)
+      const payment = calculateDayTimeLongServicePayment(numberOfDays);
+      setTotalPayment(payment);
 
       // Fixed commission structure for day time long service
-      setCompanyCommission(500 * numberOfDays)
-      setDriverPayment(5000 * numberOfDays)
+      setCompanyCommission(500 * numberOfDays);
+      setDriverPayment(5000 * numberOfDays);
 
-      setStep(2) // Skip to customer payment step
-      return
+      setStep(3); // Skip to payment summary step
+      return;
     }
 
     // For day time service, automatically set pickup time and start timer if not already set
     if (serviceType === "day-time" && !pickupTime) {
-      const now = new Date()
+      const now = new Date();
       const formattedTime = now.toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
-      })
-      setPickupTime(formattedTime)
+      });
+      setPickupTime(formattedTime);
 
       // Start the trip timer immediately for day time service
-      setTripStartTime(Date.now())
-      setIsTimerRunning(true)
+      setTripStartTime(Date.now());
+      setIsTimerRunning(true);
 
       // Start the timer
-      if (timerRef.current) clearInterval(timerRef.current)
+      if (timerRef.current) clearInterval(timerRef.current);
       timerRef.current = setInterval(() => {
         if (tripStartTime) {
-          const elapsed = Math.floor((Date.now() - tripStartTime) / 1000)
-          setElapsedTime(elapsed)
-          setTripDuration(formatTime(elapsed))
+          const elapsed = Math.floor((Date.now() - tripStartTime) / 1000);
+          setElapsedTime(elapsed);
+          setTripDuration(formatTime(elapsed));
         }
-      }, 1000)
+      }, 1000);
     }
 
     if (
@@ -444,56 +509,64 @@ export default function RideCalculator() {
       // For drink and drive service, stop waiting time and start trip time
       if (serviceType === "drink-and-drive" && isWaitingTimeRunning) {
         // Stop waiting time timer
-        if (waitingTimerRef.current) clearInterval(waitingTimerRef.current)
-        setIsWaitingTimeRunning(false)
-        setWaitingTimeEnd(Date.now())
+        if (waitingTimerRef.current) clearInterval(waitingTimerRef.current);
+        setIsWaitingTimeRunning(false);
+        setWaitingTimeEnd(Date.now());
 
         // Start trip timer
-        const currentTime = Date.now()
-        setTripStartTime(currentTime)
-        setIsTimerRunning(true)
+        const currentTime = Date.now();
+        setTripStartTime(currentTime);
+        setIsTimerRunning(true);
 
-        if (timerRef.current) clearInterval(timerRef.current)
+        if (timerRef.current) clearInterval(timerRef.current);
         timerRef.current = setInterval(() => {
-          const elapsed = Math.floor((Date.now() - currentTime) / 1000)
-          setElapsedTime(elapsed)
-          setTripDuration(formatTime(elapsed))
-        }, 1000)
+          const elapsed = Math.floor((Date.now() - currentTime) / 1000);
+          setElapsedTime(elapsed);
+          setTripDuration(formatTime(elapsed));
+        }, 1000);
       }
 
-      setStep(1)
+      setStep(2);
     }
-  }
+  };
 
   // Handle showing temporary calculation
   const handleShowTempCalculation = () => {
     // Calculate current distance if meter readings are available
-    let currentDistance = 0
-    if (startMeterCount && endMeterCount && !isNaN(Number(startMeterCount)) && !isNaN(Number(endMeterCount))) {
-      currentDistance = Math.max(0, Number(endMeterCount) - Number(startMeterCount))
+    let currentDistance = 0;
+    if (
+      startMeterCount &&
+      endMeterCount &&
+      !isNaN(Number(startMeterCount)) &&
+      !isNaN(Number(endMeterCount))
+    ) {
+      currentDistance = Math.max(
+        0,
+        Number(endMeterCount) - Number(startMeterCount)
+      );
     }
-    setTempDistance(currentDistance)
+    setTempDistance(currentDistance);
 
     // Save current trip duration
-    setTempDuration(tripDuration)
-    setTempElapsedTime(elapsedTime)
+    setTempDuration(tripDuration);
+    setTempElapsedTime(elapsedTime);
 
     // Save current waiting time for drink and drive service
     if (serviceType === "drink-and-drive") {
-      setTempWaitingTime(waitingTimeDisplay)
-      setTempWaitingCharges(waitingTimeCharges)
+      setTempWaitingTime(waitingTimeDisplay);
+      setTempWaitingCharges(waitingTimeCharges);
     }
 
     // Calculate payment based on service type
-    const durationMinutes = Math.ceil(elapsedTime / 60)
-    let payment = 0
-    let basePayment = 0
-    let distanceCharges = 0
-    let areaCharges = 0
+    const durationMinutes = Math.ceil(elapsedTime / 60);
+    let payment = 0;
+    let basePayment = 0;
+    let distanceCharges = 0;
+    let areaCharges = 0;
 
     if (serviceType === "drink-and-drive") {
-      const isPickupOutOfColombo = pickupArea === "out-colombo"
-      const isDropOutOfColombo = dropArea === "out-colombo"
+      const isPickupOutOfColombo = pickupArea === "out-colombo";
+      const isDropOutOfColombo = dropArea === "out-colombo";
 
       // Calculate base payment without waiting charges
       basePayment = calculateDrinkAndDrivePayment(
@@ -501,172 +574,199 @@ export default function RideCalculator() {
         durationMinutes,
         isPickupOutOfColombo,
         isDropOutOfColombo,
-        0,
-      )
+        0
+      );
 
       // Calculate distance charges
-      distanceCharges = currentDistance > 10 ? (currentDistance - 10) * 100 : 0
+      distanceCharges = currentDistance > 10 ? (currentDistance - 10) * 100 : 0;
 
       // Calculate area charges
-      areaCharges = 0
-      if (isPickupOutOfColombo) areaCharges += 500
-      if (isDropOutOfColombo) areaCharges += 500
+      areaCharges = 0;
+      if (isPickupOutOfColombo) areaCharges += 500;
+      if (isDropOutOfColombo) areaCharges += 500;
 
       // Add waiting charges to get total payment
-      payment = basePayment + waitingTimeCharges
+      payment = basePayment + waitingTimeCharges;
 
-      setTempBasePayment(basePayment - distanceCharges - areaCharges)
-      setTempDistanceCharges(distanceCharges)
-      setTempAreaCharges(areaCharges)
+      setTempBasePayment(basePayment - distanceCharges - areaCharges);
+      setTempDistanceCharges(distanceCharges);
+      setTempAreaCharges(areaCharges);
     } else if (serviceType === "day-time") {
-      const isOutOfColombo = pickupArea === "out-colombo" || dropArea === "out-colombo"
+      const isOutOfColombo =
+        pickupArea === "out-colombo" || dropArea === "out-colombo";
 
       if (convertToLongRide) {
         // Calculate hours (rounded up)
-        const durationHours = Math.ceil(elapsedTime / 3600)
+        const durationHours = Math.ceil(elapsedTime / 3600);
 
         // Base rate is 5500 for up to 12 hours
-        let basePay = 5500
+        let basePay = 5500;
 
         // Add 500 for each additional hour beyond 12
         if (durationHours > 12) {
-          basePay += (durationHours - 12) * 500
+          basePay += (durationHours - 12) * 500;
         }
 
-        basePayment = basePay
+        basePayment = basePay;
       } else {
-        basePayment = calculateDayTimeServicePayment(durationMinutes, isOutOfColombo)
+        basePayment = calculateDayTimeServicePayment(
+          durationMinutes,
+          isOutOfColombo
+        );
       }
 
-      payment = basePayment + foodCharges
-      setTempBasePayment(basePayment)
+      payment = basePayment + foodCharges;
+      setTempBasePayment(basePayment);
     } else if (serviceType === "day-time-long") {
-      payment = calculateDayTimeLongServicePayment(numberOfDays)
-      setTempBasePayment(payment)
+      payment = calculateDayTimeLongServicePayment(numberOfDays);
+      setTempBasePayment(payment);
     } else if (serviceType === "vehicle-delivery") {
-      payment = calculateVehicleDeliveryPayment(endLocationArea)
-      setTempBasePayment(payment)
+      payment = calculateVehicleDeliveryPayment(endLocationArea);
+      setTempBasePayment(payment);
     }
 
-    setTempPayment(payment)
-    setShowTempCalculation(true)
-  }
+    setTempPayment(payment);
+    setShowTempCalculation(true);
+  };
 
   // Handle drop marking
   const handleMarkAsDropped = () => {
-    setTripEndTime(Date.now())
-    setIsTimerRunning(false)
-    setFinalTripDuration(tripDuration) // Save the current trip duration
-    setFinalElapsedTime(elapsedTime) // Save the current elapsed time in seconds
-    if (timerRef.current) clearInterval(timerRef.current)
-  }
+    setTripEndTime(Date.now());
+    setIsTimerRunning(false);
+    setFinalTripDuration(tripDuration); // Save the current trip duration
+    setFinalElapsedTime(elapsedTime); // Save the current elapsed time in seconds
+    if (timerRef.current) clearInterval(timerRef.current);
+  };
 
   // Handle trip end and calculate payment
-  const handleEndTrip = () => {
+  const handleEndTrip = async () => {
     // Automatically mark as dropped if not already done
     if (!tripEndTime) {
-      handleMarkAsDropped()
+      handleMarkAsDropped();
     }
 
     // For day time long service, calculate payment directly
     if (serviceType === "day-time-long") {
-      const payment = calculateDayTimeLongServicePayment(numberOfDays)
-      setTotalPayment(payment)
+      const payment = calculateDayTimeLongServicePayment(numberOfDays);
+      setTotalPayment(payment);
 
       // Fixed commission structure for day time long service
-      setCompanyCommission(500 * numberOfDays)
-      setDriverPayment(5000 * numberOfDays)
+      setCompanyCommission(500 * numberOfDays);
+      setDriverPayment(5000 * numberOfDays);
 
-      setStep(2)
-      return
+      setStep(3);
+      return;
     }
 
     // Validation based on service type
     if (
-      (serviceType === "drink-and-drive" && dropLocation && dropArea && endMeterCount) ||
+      (serviceType === "drink-and-drive" &&
+        dropLocation &&
+        dropArea &&
+        endMeterCount) ||
       (serviceType === "day-time" && dropLocation && dropArea) ||
       (serviceType === "vehicle-delivery" && dropLocation && endLocationArea)
     ) {
       // Calculate distance for services that need it
-      let distance = 0
-      if (serviceType === "drink-and-drive" || serviceType === "vehicle-delivery") {
-        distance = Math.max(0, Number.parseFloat(endMeterCount) - Number.parseFloat(startMeterCount))
+      let distance = 0;
+      if (
+        serviceType === "drink-and-drive" ||
+        serviceType === "vehicle-delivery"
+      ) {
+        distance = Math.max(
+          0,
+          Number.parseFloat(endMeterCount) - Number.parseFloat(startMeterCount)
+        );
       }
-      setTotalDistance(distance)
+      setTotalDistance(distance);
 
       // Calculate trip duration in minutes - use the final elapsed time
-      const durationMinutes = Math.ceil(finalElapsedTime > 0 ? finalElapsedTime / 60 : elapsedTime / 60)
+      const durationMinutes = Math.ceil(
+        finalElapsedTime > 0 ? finalElapsedTime / 60 : elapsedTime / 60
+      );
 
       // Calculate payment based on service type
-      let payment = 0
-      let basePay = 0
-      let distanceCharge = 0
-      let areaCharge = 0
+      let payment = 0;
+      let basePay = 0;
+      let distanceCharge = 0;
+      let areaCharge = 0;
 
       if (serviceType === "drink-and-drive") {
         // Check if either pickup or drop area is outside Colombo
-        const isPickupOutOfColombo = pickupArea === "out-colombo"
-        const isDropOutOfColombo = dropArea === "out-colombo"
+        const isPickupOutOfColombo = pickupArea === "out-colombo";
+        const isDropOutOfColombo = dropArea === "out-colombo";
 
         // Calculate base payment without waiting charges
-        basePay = calculateDrinkAndDrivePayment(distance, durationMinutes, isPickupOutOfColombo, isDropOutOfColombo, 0)
+        basePay = calculateDrinkAndDrivePayment(
+          distance,
+          durationMinutes,
+          isPickupOutOfColombo,
+          isDropOutOfColombo,
+          0
+        );
 
         // Calculate distance charges
-        distanceCharge = distance > 10 ? (distance - 10) * 100 : 0
+        distanceCharge = distance > 10 ? (distance - 10) * 100 : 0;
 
         // Calculate area charges
-        areaCharge = 0
-        if (isPickupOutOfColombo) areaCharge += 500
-        if (isDropOutOfColombo) areaCharge += 500
+        areaCharge = 0;
+        if (isPickupOutOfColombo) areaCharge += 500;
+        if (isDropOutOfColombo) areaCharge += 500;
 
         // Add waiting charges to get total payment
-        payment = basePay + waitingTimeCharges
+        payment = basePay + waitingTimeCharges;
 
-        setBasePayment(basePay - distanceCharge - areaCharge)
-        setDistanceCharges(distanceCharge)
-        setAreaCharges(areaCharge)
+        setBasePayment(basePay - distanceCharge - areaCharge);
+        setDistanceCharges(distanceCharge);
+        setAreaCharges(areaCharge);
       } else if (serviceType === "day-time") {
         if (convertToLongRide) {
           // Calculate hours (rounded up)
-          const durationHours = Math.ceil(finalElapsedTime > 0 ? finalElapsedTime / 3600 : elapsedTime / 3600)
+          const durationHours = Math.ceil(
+            finalElapsedTime > 0 ? finalElapsedTime / 3600 : elapsedTime / 3600
+          );
 
           // Base rate is 5500 for up to 12 hours
-          let basePay = 5500
+          let basePay = 5500;
 
           // Add 500 for each additional hour beyond 12
           if (durationHours > 12) {
-            basePay += (durationHours - 12) * 500
+            basePay += (durationHours - 12) * 500;
           }
 
-          setBasePayment(basePay)
-          payment = basePay + foodCharges
-          setTotalPayment(payment)
+          setBasePayment(basePay);
+          payment = basePay + foodCharges;
+          setTotalPayment(payment);
 
           // For long ride conversion: 15% commission on base amount (excluding food)
-          const commission = Math.round(basePay * 0.15)
-          const driverPay = Math.round(basePay * 0.85) + foodCharges
-          setCompanyCommission(commission)
-          setDriverPayment(driverPay)
+          const commission = Math.round(basePay * 0.15);
+          const driverPay = Math.round(basePay * 0.85) + foodCharges;
+          setCompanyCommission(commission);
+          setDriverPayment(driverPay);
         } else {
           // Original day time calculation
-          const isOutOfColombo = pickupArea === "out-colombo" || dropArea === "out-colombo"
-          const basePay = calculateDayTimeServicePayment(durationMinutes, isOutOfColombo)
-          setBasePayment(basePay)
-          payment = basePay + foodCharges
-          setTotalPayment(payment)
+          const isOutOfColombo =
+            pickupArea === "out-colombo" || dropArea === "out-colombo";
+          const basePay = calculateDayTimeServicePayment(
+            durationMinutes,
+            isOutOfColombo
+          );
+          setBasePayment(basePay);
+          payment = basePay + foodCharges;
+          setTotalPayment(payment);
 
           // Regular day time: 15% commission on base amount (excluding food)
-          const commission = Math.round(basePay * 0.15)
-          const driverPay = Math.round(basePay * 0.85) + foodCharges
-          setCompanyCommission(commission)
-          setDriverPayment(driverPay)
+          const commission = Math.round(basePay * 0.15);
+          const driverPay = Math.round(basePay * 0.85) + foodCharges;
+          setCompanyCommission(commission);
+          setDriverPayment(driverPay);
         }
       } else if (serviceType === "vehicle-delivery") {
-        payment = calculateVehicleDeliveryPayment(endLocationArea)
-        setBasePayment(payment)
+        payment = calculateVehicleDeliveryPayment(endLocationArea);
+        setBasePayment(payment);
       }
 
-      setTotalPayment(payment)
+      setTotalPayment(payment);
 
       // Update commission calculation based on service type
       // Commission calculation is already handled within each service type block above
@@ -674,46 +774,81 @@ export default function RideCalculator() {
 
       // Ensure timer is completely stopped
       if (timerRef.current) {
-        clearInterval(timerRef.current)
-        timerRef.current = null
+        clearInterval(timerRef.current);
+        timerRef.current = null;
       }
 
       // Ensure waiting timer is completely stopped
       if (waitingTimerRef.current) {
-        clearInterval(waitingTimerRef.current)
-        waitingTimerRef.current = null
+        clearInterval(waitingTimerRef.current);
+        waitingTimerRef.current = null;
       }
 
-      setIsTimerRunning(false)
-      setIsWaitingTimeRunning(false)
+      setIsTimerRunning(false);
+      setIsWaitingTimeRunning(false);
 
       // If we don't have final values yet, set them now
       if (!finalTripDuration) {
-        setFinalTripDuration(tripDuration)
+        setFinalTripDuration(tripDuration);
       }
       if (finalElapsedTime === 0) {
-        setFinalElapsedTime(elapsedTime)
+        setFinalElapsedTime(elapsedTime);
       }
 
-      setStep(2)
+      // Send SMS notification to customer with trip summary
+      if (phoneNumber && customerName) {
+        const rideTypeText =
+          serviceType === "drink-and-drive"
+            ? "Drink and Drive"
+            : serviceType === "day-time"
+            ? "Day Time Service"
+            : serviceType === "day-time-long"
+            ? "Day Time Long Service"
+            : "Vehicle Delivery";
+
+        let summaryMessage = `Thank you ${customerName} for using Mystery99 Travel!\n\n`;
+        summaryMessage += `${rideTypeText}\n`;
+        summaryMessage += `Pickup: ${pickupLocation}\n`;
+        summaryMessage += `Drop: ${dropLocation}\n`;
+        summaryMessage += `Duration: ${finalTripDuration || tripDuration}\n`;
+
+        if (
+          serviceType === "drink-and-drive" ||
+          serviceType === "vehicle-delivery"
+        ) {
+          summaryMessage += `Distance: ${distance.toFixed(2)} KM\n`;
+        }
+
+        if (serviceType === "drink-and-drive" && waitingTimeSeconds > 0) {
+          summaryMessage += `Waiting Time: ${waitingTimeDisplay}\n`;
+        }
+
+        summaryMessage += `Total: Rs.${payment.toLocaleString()}\n\n`;
+        summaryMessage += `We hope you had a safe journey! Help Hotline: 0779621559`;
+
+        await sendSMS(phoneNumber, summaryMessage);
+      }
+
+      setStep(3);
     }
-  }
+  };
 
   // Handle final end trip and save to database
   const handleFinalEndTrip = async () => {
     if (!currentUser) {
-      alert("You must be logged in to save trip data.")
-      return
+      alert("You must be logged in to save trip data.");
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
 
     try {
       // Create a base trip data object with required fields
       const tripData = {
         userId: currentUser.uid,
         serviceType,
-        pickupLocation: serviceType === "day-time-long" ? "N/A" : pickupLocation,
+        pickupLocation:
+          serviceType === "day-time-long" ? "N/A" : pickupLocation,
         dropLocation: serviceType === "day-time-long" ? "N/A" : dropLocation,
         tripDuration: finalTripDuration || tripDuration,
         elapsedTime: finalElapsedTime || elapsedTime,
@@ -722,191 +857,191 @@ export default function RideCalculator() {
         driverPayment,
         paymentMethod,
         status: paymentMethod === "cash" ? "completed" : "pending",
-      }
+      };
 
       // Add conditional fields based on service type
-      const additionalData: Record<string, any> = {}
+      const additionalData: Record<string, any> = {};
 
       // Add service-specific fields
       if (serviceType === "day-time-long") {
-        additionalData.numberOfDays = numberOfDays
+        additionalData.numberOfDays = numberOfDays;
       } else if (serviceType !== "vehicle-delivery") {
-        if (pickupArea) additionalData.pickupArea = pickupArea
-        if (dropArea) additionalData.dropArea = dropArea
+        if (pickupArea) additionalData.pickupArea = pickupArea;
+        if (dropArea) additionalData.dropArea = dropArea;
       }
 
       if (serviceType === "vehicle-delivery") {
-        if (endLocationArea) additionalData.endLocationArea = endLocationArea
+        if (endLocationArea) additionalData.endLocationArea = endLocationArea;
       }
 
       // Add meter readings if they exist and are valid
       if (startMeterCount && !isNaN(Number.parseFloat(startMeterCount))) {
-        additionalData.startMeterCount = Number.parseFloat(startMeterCount)
+        additionalData.startMeterCount = Number.parseFloat(startMeterCount);
       }
 
       if (endMeterCount && !isNaN(Number.parseFloat(endMeterCount))) {
-        additionalData.endMeterCount = Number.parseFloat(endMeterCount)
+        additionalData.endMeterCount = Number.parseFloat(endMeterCount);
       }
 
       // Add distance if calculated
       if (totalDistance > 0) {
-        additionalData.distance = totalDistance
+        additionalData.distance = totalDistance;
       }
 
       // Add waiting time details for drink and drive service
       if (serviceType === "drink-and-drive") {
-        additionalData.waitingTimeSeconds = waitingTimeSeconds
-        additionalData.waitingTimeCharges = waitingTimeCharges
-        additionalData.basePayment = basePayment
-        additionalData.distanceCharges = distanceCharges
-        additionalData.areaCharges = areaCharges
+        additionalData.waitingTimeSeconds = waitingTimeSeconds;
+        additionalData.waitingTimeCharges = waitingTimeCharges;
+        additionalData.basePayment = basePayment;
+        additionalData.distanceCharges = distanceCharges;
+        additionalData.areaCharges = areaCharges;
       }
 
       // Add food charges for day time service
       if (serviceType === "day-time") {
-        additionalData.foodCharges = foodCharges
+        additionalData.foodCharges = foodCharges;
       }
 
       // Add customer details if provided
-      if (customerName) additionalData.customerName = customerName
-      if (phoneNumber) additionalData.phoneNumber = phoneNumber
+      if (customerName) additionalData.customerName = customerName;
+      if (phoneNumber) additionalData.phoneNumber = phoneNumber;
 
       // Save trip data to Firestore
       await saveTrip({
         ...tripData,
         ...additionalData,
-      })
+      });
 
       // Clear the saved trip data since it's now completed
       if (currentUser) {
-        localStorage.removeItem(`saved_trip_${currentUser.uid}`)
+        localStorage.removeItem(`saved_trip_${currentUser.uid}`);
       }
 
-      setStep(3)
+      setStep(4);
     } catch (error) {
-      console.error("Error saving trip:", error)
-      alert("Failed to save trip data. Please try again.")
+      console.error("Error saving trip:", error);
+      alert("Failed to save trip data. Please try again.");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   // Reset and start a new ride
   const handleRideAgain = () => {
     // Reset all states
-    setStep(0)
-    setPickupLocation("")
-    setDropLocation("")
-    setPickupArea("")
-    setDropArea("")
-    setEndLocationArea("")
-    setStartMeterCount("")
-    setEndMeterCount("")
-    setCustomerName("")
-    setPhoneNumber("")
-    setPaymentMethod("cash")
-    setPickupTime("")
-    setTripStartTime(null)
-    setTripEndTime(null)
-    setElapsedTime(0)
-    setFinalElapsedTime(0)
-    setTripDuration("00:00:00")
-    setTotalDistance(0)
-    setTotalPayment(0)
-    setCompanyCommission(0)
-    setDriverPayment(0)
-    setFinalTripDuration("")
-    setWaitingTimeStart(null)
-    setWaitingTimeEnd(null)
-    setWaitingTimeSeconds(0)
-    setWaitingTimeDisplay("00:00:00")
-    setWaitingTimeCharges(0)
-    setIsWaitingTimeRunning(false)
-    setBasePayment(0)
-    setDistanceCharges(0)
-    setAreaCharges(0)
+    setStep(0);
+    setPickupLocation("");
+    setDropLocation("");
+    setPickupArea("");
+    setDropArea("");
+    setEndLocationArea("");
+    setStartMeterCount("");
+    setEndMeterCount("");
+    setCustomerName("");
+    setPhoneNumber("");
+    setPaymentMethod("cash");
+    setPickupTime("");
+    setTripStartTime(null);
+    setTripEndTime(null);
+    setElapsedTime(0);
+    setFinalElapsedTime(0);
+    setTripDuration("00:00:00");
+    setTotalDistance(0);
+    setTotalPayment(0);
+    setCompanyCommission(0);
+    setDriverPayment(0);
+    setFinalTripDuration("");
+    setWaitingTimeStart(null);
+    setWaitingTimeEnd(null);
+    setWaitingTimeSeconds(0);
+    setWaitingTimeDisplay("00:00:00");
+    setWaitingTimeCharges(0);
+    setIsWaitingTimeRunning(false);
+    setBasePayment(0);
+    setDistanceCharges(0);
+    setAreaCharges(0);
     setFoodOptions([
       { id: "breakfast", name: "Breakfast", price: 300, selected: false },
       { id: "lunch", name: "Lunch", price: 300, selected: false },
       { id: "dinner", name: "Dinner", price: 300, selected: false },
-    ])
-    setFoodCharges(0)
-    setNumberOfDays(1)
+    ]);
+    setFoodCharges(0);
+    setNumberOfDays(1);
 
     // Clear any saved trip data
     if (currentUser) {
-      localStorage.removeItem(`saved_trip_${currentUser.uid}`)
+      localStorage.removeItem(`saved_trip_${currentUser.uid}`);
     }
 
     // Go back to service selection
-    router.push("/service-selection")
-  }
+    router.push("/service-selection");
+  };
 
   // Cleanup timer on unmount
   useEffect(() => {
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-      if (waitingTimerRef.current) clearInterval(waitingTimerRef.current)
-    }
-  }, [])
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (waitingTimerRef.current) clearInterval(waitingTimerRef.current);
+    };
+  }, []);
 
   // Update timer status when isTimerRunning changes
   useEffect(() => {
     if (isTimerRunning) {
-      if (timerRef.current) clearInterval(timerRef.current)
+      if (timerRef.current) clearInterval(timerRef.current);
       timerRef.current = setInterval(() => {
         if (tripStartTime) {
-          const elapsed = Math.floor((Date.now() - tripStartTime) / 1000)
-          setElapsedTime(elapsed)
-          setTripDuration(formatTime(elapsed))
+          const elapsed = Math.floor((Date.now() - tripStartTime) / 1000);
+          setElapsedTime(elapsed);
+          setTripDuration(formatTime(elapsed));
         }
-      }, 1000)
+      }, 1000);
     } else {
-      if (timerRef.current) clearInterval(timerRef.current)
+      if (timerRef.current) clearInterval(timerRef.current);
     }
 
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-  }, [isTimerRunning, tripStartTime])
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isTimerRunning, tripStartTime]);
 
   // Update waiting timer status when isWaitingTimeRunning changes
   useEffect(() => {
     if (isWaitingTimeRunning && waitingTimeStart) {
-      if (waitingTimerRef.current) clearInterval(waitingTimerRef.current)
+      if (waitingTimerRef.current) clearInterval(waitingTimerRef.current);
       waitingTimerRef.current = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - waitingTimeStart) / 1000)
-        setWaitingTimeSeconds(elapsed)
-        setWaitingTimeDisplay(formatTime(elapsed))
+        const elapsed = Math.floor((Date.now() - waitingTimeStart) / 1000);
+        setWaitingTimeSeconds(elapsed);
+        setWaitingTimeDisplay(formatTime(elapsed));
 
         // Calculate waiting charges (first 15 minutes free, then 300 per 15 minutes)
-        const charges = calculateWaitingCharges(elapsed)
-        setWaitingTimeCharges(charges)
-      }, 1000)
+        const charges = calculateWaitingCharges(elapsed);
+        setWaitingTimeCharges(charges);
+      }, 1000);
     } else {
-      if (waitingTimerRef.current) clearInterval(waitingTimerRef.current)
+      if (waitingTimerRef.current) clearInterval(waitingTimerRef.current);
     }
 
     return () => {
-      if (waitingTimerRef.current) clearInterval(waitingTimerRef.current)
-    }
-  }, [isWaitingTimeRunning, waitingTimeStart])
+      if (waitingTimerRef.current) clearInterval(waitingTimerRef.current);
+    };
+  }, [isWaitingTimeRunning, waitingTimeStart]);
 
   // Get service title based on service type
   const getServiceTitle = () => {
     switch (serviceType) {
       case "drink-and-drive":
-        return "Drink and Drive Service"
+        return "Drink and Drive Service";
       case "day-time":
-        return "Day Time Service"
+        return "Day Time Service";
       case "day-time-long":
-        return "Day Time Long Service"
+        return "Day Time Long Service";
       case "vehicle-delivery":
-        return "Vehicle Delivery Service"
+        return "Vehicle Delivery Service";
       default:
-        return "Ride Service"
+        return "Ride Service";
     }
-  }
+  };
 
   // Render the appropriate step
   const renderStep = () => {
@@ -920,12 +1055,18 @@ export default function RideCalculator() {
           className="space-y-6"
         >
           <Alert className="bg-amber-50 border-amber-200">
-            <AlertTitle className="text-amber-800">You have an unfinished trip</AlertTitle>
+            <AlertTitle className="text-amber-800">
+              You have an unfinished trip
+            </AlertTitle>
             <AlertDescription className="text-amber-700">
-              You have a trip in progress that was interrupted. Would you like to resume it or start a new trip?
+              You have a trip in progress that was interrupted. Would you like
+              to resume it or start a new trip?
             </AlertDescription>
             <div className="flex gap-3 mt-4">
-              <Button onClick={resumeSavedTrip} className="bg-amber-600 hover:bg-amber-700 text-white">
+              <Button
+                onClick={resumeSavedTrip}
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
                 Resume Trip
               </Button>
               <Button
@@ -938,7 +1079,7 @@ export default function RideCalculator() {
             </div>
           </Alert>
         </motion.div>
-      )
+      );
     }
 
     // Show resuming notification if applicable
@@ -953,16 +1094,17 @@ export default function RideCalculator() {
           <Alert className="bg-green-50 border-green-200">
             <AlertTitle className="text-green-800">Trip Resumed</AlertTitle>
             <AlertDescription className="text-green-700">
-              Your previous trip has been successfully resumed. You can continue from where you left off.
+              Your previous trip has been successfully resumed. You can continue
+              from where you left off.
             </AlertDescription>
           </Alert>
           {renderCurrentStep()}
         </motion.div>
-      )
+      );
     }
 
-    return renderCurrentStep()
-  }
+    return renderCurrentStep();
+  };
 
   // Render the current step content
   const renderCurrentStep = () => {
@@ -980,13 +1122,17 @@ export default function RideCalculator() {
               <CardContainer>
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Number of Days</label>
+                    <label className="text-sm font-medium mb-2 block">
+                      Number of Days
+                    </label>
                     <div className="flex items-center space-x-3">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => setNumberOfDays(Math.max(1, numberOfDays - 1))}
+                        onClick={() =>
+                          setNumberOfDays(Math.max(1, numberOfDays - 1))
+                        }
                         disabled={numberOfDays <= 1}
                         className="h-10 w-10 p-0"
                       >
@@ -998,8 +1144,8 @@ export default function RideCalculator() {
                         max="365"
                         value={numberOfDays}
                         onChange={(e) => {
-                          const value = Number.parseInt(e.target.value) || 1
-                          setNumberOfDays(Math.max(1, Math.min(365, value)))
+                          const value = Number.parseInt(e.target.value) || 1;
+                          setNumberOfDays(Math.max(1, Math.min(365, value)));
                         }}
                         className="h-10 text-center font-medium text-lg w-20"
                       />
@@ -1007,27 +1153,35 @@ export default function RideCalculator() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => setNumberOfDays(Math.min(365, numberOfDays + 1))}
+                        onClick={() =>
+                          setNumberOfDays(Math.min(365, numberOfDays + 1))
+                        }
                         disabled={numberOfDays >= 365}
                         className="h-10 w-10 p-0"
                       >
                         +
                       </Button>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Use +/- buttons or type directly (1-365 days)</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Use +/- buttons or type directly (1-365 days)
+                    </p>
                   </div>
 
                   <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <h4 className="text-sm font-medium mb-2">Service Details</h4>
+                    <h4 className="text-sm font-medium mb-2">
+                      Service Details
+                    </h4>
                     <p className="text-sm text-gray-700">
-                      Day Time Long Service is charged at a fixed rate of Rs.5500 per day.
+                      Day Time Long Service is charged at a fixed rate of
+                      Rs.5500 per day.
                     </p>
                     <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                       <div>Rate per day:</div>
                       <div className="text-right font-medium">Rs.5,500</div>
 
                       <div>
-                        Total for {numberOfDays} day{numberOfDays > 1 ? "s" : ""}:
+                        Total for {numberOfDays} day
+                        {numberOfDays > 1 ? "s" : ""}:
                       </div>
                       <div className="text-right font-medium text-lg text-primary-600">
                         Rs.{(5500 * numberOfDays).toLocaleString()}
@@ -1045,7 +1199,7 @@ export default function RideCalculator() {
                 Proceed to Payment
               </Button>
             </motion.div>
-          )
+          );
 
         case 2:
           return (
@@ -1087,8 +1241,12 @@ export default function RideCalculator() {
                   </div>
 
                   <div className="bg-primary-50 rounded-lg p-4 text-center mt-4">
-                    <div className="text-sm font-medium text-gray-600">Full Payment Amount</div>
-                    <div className="text-3xl font-bold text-primary-600">Rs.{totalPayment.toLocaleString()}</div>
+                    <div className="text-sm font-medium text-gray-600">
+                      Full Payment Amount
+                    </div>
+                    <div className="text-3xl font-bold text-primary-600">
+                      Rs.{totalPayment.toLocaleString()}
+                    </div>
                   </div>
                 </div>
               </CardContainer>
@@ -1118,7 +1276,9 @@ export default function RideCalculator() {
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium block mb-2">Payment Method</label>
+                    <label className="text-sm font-medium block mb-2">
+                      Payment Method
+                    </label>
                     <div className="flex items-center space-x-6">
                       <div className="flex items-center space-x-2">
                         <Checkbox
@@ -1126,7 +1286,10 @@ export default function RideCalculator() {
                           checked={paymentMethod === "cash"}
                           onCheckedChange={() => setPaymentMethod("cash")}
                         />
-                        <label htmlFor="cash" className="text-sm cursor-pointer">
+                        <label
+                          htmlFor="cash"
+                          className="text-sm cursor-pointer"
+                        >
                           Cash Payment
                         </label>
                       </div>
@@ -1136,7 +1299,10 @@ export default function RideCalculator() {
                           checked={paymentMethod === "credit"}
                           onCheckedChange={() => setPaymentMethod("credit")}
                         />
-                        <label htmlFor="credit" className="text-sm cursor-pointer">
+                        <label
+                          htmlFor="credit"
+                          className="text-sm cursor-pointer"
+                        >
                           Credit Payment
                         </label>
                       </div>
@@ -1153,7 +1319,7 @@ export default function RideCalculator() {
                 {isSaving ? "Saving..." : "End Trip"}
               </Button>
             </motion.div>
-          )
+          );
 
         case 3:
           return (
@@ -1177,31 +1343,98 @@ export default function RideCalculator() {
                     </div>
 
                     <div className="font-medium">Total Payment</div>
-                    <div className="text-right">Rs.{totalPayment.toLocaleString()}</div>
+                    <div className="text-right">
+                      Rs.{totalPayment.toLocaleString()}
+                    </div>
 
-                    <div className="font-medium">Company Commission (Rs.500/day)</div>
-                    <div className="text-right">Rs.{companyCommission.toLocaleString()}</div>
+                    <div className="font-medium">
+                      Company Commission (Rs.500/day)
+                    </div>
+                    <div className="text-right">
+                      Rs.{companyCommission.toLocaleString()}
+                    </div>
 
-                    <div className="font-medium">Driver Payment (Rs.5000/day)</div>
-                    <div className="text-right">Rs.{driverPayment.toLocaleString()}</div>
+                    <div className="font-medium">
+                      Driver Payment (Rs.5000/day)
+                    </div>
+                    <div className="text-right">
+                      Rs.{driverPayment.toLocaleString()}
+                    </div>
                   </div>
                 </div>
               </CardContainer>
 
-              <Button className="w-full h-12 bg-green-600 hover:bg-green-700 text-white" onClick={handleRideAgain}>
+              <Button
+                className="w-full h-12 bg-green-600 hover:bg-green-700 text-white"
+                onClick={handleRideAgain}
+              >
                 Ride Again
               </Button>
             </motion.div>
-          )
+          );
 
         default:
-          return <div>Select a service to begin.</div>
+          return <div>Select a service to begin.</div>;
       }
     }
 
     // Regular service flow
     switch (step) {
       case 0:
+        // Customer Details Step
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            <CardContainer>
+              <h3 className="text-lg font-medium mb-4">Customer Details</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Please enter customer information before starting the trip
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">
+                    Customer Name <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Enter customer name"
+                    className="h-10"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="Enter phone number"
+                    className="h-10"
+                  />
+                </div>
+              </div>
+            </CardContainer>
+
+            <Button
+              className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => setStep(1)}
+              disabled={!customerName.trim() || !phoneNumber.trim()}
+            >
+              Continue to Trip Details
+            </Button>
+          </motion.div>
+        );
+
+      case 1:
+        // Pickup Location Step
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1221,7 +1454,8 @@ export default function RideCalculator() {
                   />
                 </div>
 
-                {(serviceType === "drink-and-drive" || serviceType === "day-time") && (
+                {(serviceType === "drink-and-drive" ||
+                  serviceType === "day-time") && (
                   <div>
                     <label className="text-sm font-medium">Trip Area</label>
                     <Select value={pickupArea} onValueChange={setPickupArea}>
@@ -1230,7 +1464,9 @@ export default function RideCalculator() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="colombo">Colombo Area</SelectItem>
-                        <SelectItem value="out-colombo">Out of Colombo Area</SelectItem>
+                        <SelectItem value="out-colombo">
+                          Out of Colombo Area
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1246,14 +1482,18 @@ export default function RideCalculator() {
 
                   {serviceType === "drink-and-drive" && waitingTimeStart ? (
                     <div>
-                      <label className="text-sm font-medium">Waiting Time</label>
+                      <label className="text-sm font-medium">
+                        Waiting Time
+                      </label>
                       <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center justify-center font-mono">
                         {waitingTimeDisplay}
                       </div>
                     </div>
                   ) : (
                     <div>
-                      <label className="text-sm font-medium">Trip Duration</label>
+                      <label className="text-sm font-medium">
+                        Trip Duration
+                      </label>
                       <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center justify-center font-mono">
                         {tripDuration}
                       </div>
@@ -1261,14 +1501,19 @@ export default function RideCalculator() {
                   )}
                 </div>
 
-                {serviceType === "drink-and-drive" && waitingTimeStart && waitingTimeCharges > 0 && (
-                  <div className="bg-amber-50 p-3 rounded-md border border-amber-200">
-                    <p className="text-sm text-amber-800">
-                      <span className="font-medium">Waiting Charges:</span> Rs.{waitingTimeCharges.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-amber-700 mt-1">First 15 minutes free, then Rs.300 per 15 minutes</p>
-                  </div>
-                )}
+                {serviceType === "drink-and-drive" &&
+                  waitingTimeStart &&
+                  waitingTimeCharges > 0 && (
+                    <div className="bg-amber-50 p-3 rounded-md border border-amber-200">
+                      <p className="text-sm text-amber-800">
+                        <span className="font-medium">Waiting Charges:</span>{" "}
+                        Rs.{waitingTimeCharges.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-amber-700 mt-1">
+                        First 15 minutes free, then Rs.300 per 15 minutes
+                      </p>
+                    </div>
+                  )}
 
                 {serviceType !== "day-time" && (
                   <Button
@@ -1280,9 +1525,12 @@ export default function RideCalculator() {
                   </Button>
                 )}
 
-                {(serviceType === "drink-and-drive" || serviceType === "vehicle-delivery") && (
+                {(serviceType === "drink-and-drive" ||
+                  serviceType === "vehicle-delivery") && (
                   <div>
-                    <label className="text-sm font-medium">Start Meter Count</label>
+                    <label className="text-sm font-medium">
+                      Start Meter Count
+                    </label>
                     <Input
                       type="number"
                       value={startMeterCount}
@@ -1308,9 +1556,10 @@ export default function RideCalculator() {
               Start Trip
             </Button>
           </motion.div>
-        )
+        );
 
-      case 1:
+      case 2:
+        // Drop Location Step
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1332,15 +1581,26 @@ export default function RideCalculator() {
 
                 {serviceType === "vehicle-delivery" ? (
                   <div>
-                    <label className="text-sm font-medium">End Location Area</label>
-                    <Select value={endLocationArea} onValueChange={setEndLocationArea}>
+                    <label className="text-sm font-medium">
+                      End Location Area
+                    </label>
+                    <Select
+                      value={endLocationArea}
+                      onValueChange={setEndLocationArea}
+                    >
                       <SelectTrigger className="h-10">
                         <SelectValue placeholder="Select area" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="colombo-1-5">Colombo 1 to 5</SelectItem>
-                        <SelectItem value="colombo-area">Colombo Area</SelectItem>
-                        <SelectItem value="western-province">Western Province</SelectItem>
+                        <SelectItem value="colombo-1-5">
+                          Colombo 1 to 5
+                        </SelectItem>
+                        <SelectItem value="colombo-area">
+                          Colombo Area
+                        </SelectItem>
+                        <SelectItem value="western-province">
+                          Western Province
+                        </SelectItem>
                         <SelectItem value="island-wide">Island Wide</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1354,7 +1614,9 @@ export default function RideCalculator() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="colombo">Colombo Area</SelectItem>
-                        <SelectItem value="out-colombo">Out of Colombo Area</SelectItem>
+                        <SelectItem value="out-colombo">
+                          Out of Colombo Area
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1375,26 +1637,34 @@ export default function RideCalculator() {
                   </div>
                 </div>
 
-                {serviceType === "drink-and-drive" && waitingTimeSeconds > 0 && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Waiting Time</label>
-                      <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center justify-center font-mono">
-                        {waitingTimeDisplay}
+                {serviceType === "drink-and-drive" &&
+                  waitingTimeSeconds > 0 && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">
+                          Waiting Time
+                        </label>
+                        <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center justify-center font-mono">
+                          {waitingTimeDisplay}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">
+                          Waiting Charges
+                        </label>
+                        <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center justify-center">
+                          Rs.{waitingTimeCharges.toLocaleString()}
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium">Waiting Charges</label>
-                      <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center justify-center">
-                        Rs.{waitingTimeCharges.toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                {(serviceType === "drink-and-drive" || serviceType === "vehicle-delivery") && (
+                {(serviceType === "drink-and-drive" ||
+                  serviceType === "vehicle-delivery") && (
                   <div>
-                    <label className="text-sm font-medium">End Meter Count</label>
+                    <label className="text-sm font-medium">
+                      End Meter Count
+                    </label>
                     <Input
                       type="number"
                       value={endMeterCount}
@@ -1410,9 +1680,14 @@ export default function RideCalculator() {
                     <Checkbox
                       id="convert-to-long-ride"
                       checked={convertToLongRide}
-                      onCheckedChange={(checked) => setConvertToLongRide(checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        setConvertToLongRide(checked as boolean)
+                      }
                     />
-                    <label htmlFor="convert-to-long-ride" className="text-sm cursor-pointer text-blue-800 font-medium">
+                    <label
+                      htmlFor="convert-to-long-ride"
+                      className="text-sm cursor-pointer text-blue-800 font-medium"
+                    >
                       Convert into Long Ride (Rs.5500 for up to 12 hours)
                     </label>
                   </div>
@@ -1423,7 +1698,9 @@ export default function RideCalculator() {
                   onClick={handleShowTempCalculation}
                   disabled={
                     !dropLocation ||
-                    (serviceType === "vehicle-delivery" ? !endLocationArea : !dropArea) ||
+                    (serviceType === "vehicle-delivery"
+                      ? !endLocationArea
+                      : !dropArea) ||
                     (serviceType !== "day-time" && !endMeterCount)
                   }
                 >
@@ -1432,16 +1709,29 @@ export default function RideCalculator() {
 
                 {serviceType === "day-time" && (
                   <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                    <h4 className="text-sm font-medium mb-3">Food Accommodation</h4>
+                    <h4 className="text-sm font-medium mb-3">
+                      Food Accommodation
+                    </h4>
                     <div className="space-y-2">
                       {foodOptions.map((option) => (
-                        <div key={option.id} className="flex items-center space-x-2">
+                        <div
+                          key={option.id}
+                          className="flex items-center space-x-2"
+                        >
                           <Checkbox
                             id={option.id}
                             checked={option.selected}
-                            onCheckedChange={(checked) => handleFoodOptionChange(option.id, checked as boolean)}
+                            onCheckedChange={(checked) =>
+                              handleFoodOptionChange(
+                                option.id,
+                                checked as boolean
+                              )
+                            }
                           />
-                          <label htmlFor={option.id} className="text-sm cursor-pointer">
+                          <label
+                            htmlFor={option.id}
+                            className="text-sm cursor-pointer"
+                          >
                             {option.name} - Rs.{option.price}
                           </label>
                         </div>
@@ -1457,16 +1747,19 @@ export default function RideCalculator() {
               onClick={handleEndTrip}
               disabled={
                 !dropLocation ||
-                (serviceType === "vehicle-delivery" ? !endLocationArea : !dropArea) ||
+                (serviceType === "vehicle-delivery"
+                  ? !endLocationArea
+                  : !dropArea) ||
                 (serviceType !== "day-time" && !endMeterCount)
               }
             >
               End Trip
             </Button>
           </motion.div>
-        )
+        );
 
-      case 2:
+      case 3:
+        // Payment Summary and Method Selection
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1482,15 +1775,21 @@ export default function RideCalculator() {
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div className="font-medium">Total Trip Distance</div>
-                      <div className="text-right">{totalDistance.toFixed(2)} KM</div>
+                      <div className="text-right">
+                        {totalDistance.toFixed(2)} KM
+                      </div>
 
                       <div className="font-medium">Total Trip Time</div>
-                      <div className="text-right font-mono text-primary-600">{finalTripDuration || tripDuration}</div>
+                      <div className="text-right font-mono text-primary-600">
+                        {finalTripDuration || tripDuration}
+                      </div>
 
                       {waitingTimeSeconds > 0 && (
                         <>
                           <div className="font-medium">Waiting Time</div>
-                          <div className="text-right font-mono">{waitingTimeDisplay}</div>
+                          <div className="text-right font-mono">
+                            {waitingTimeDisplay}
+                          </div>
                         </>
                       )}
 
@@ -1519,31 +1818,43 @@ export default function RideCalculator() {
                       <h4 className="font-medium text-sm">Payment Breakdown</h4>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>Base Trip Charge</div>
-                        <div className="text-right">Rs.{basePayment.toLocaleString()}</div>
+                        <div className="text-right">
+                          Rs.{basePayment.toLocaleString()}
+                        </div>
 
                         {distanceCharges > 0 && (
                           <>
                             <div>Distance Charges (over 10km)</div>
-                            <div className="text-right">Rs.{distanceCharges.toLocaleString()}</div>
+                            <div className="text-right">
+                              Rs.{distanceCharges.toLocaleString()}
+                            </div>
                           </>
                         )}
 
                         {areaCharges > 0 && (
                           <>
                             <div>Area Charges</div>
-                            <div className="text-right">Rs.{areaCharges.toLocaleString()}</div>
+                            <div className="text-right">
+                              Rs.{areaCharges.toLocaleString()}
+                            </div>
                           </>
                         )}
 
                         {waitingTimeCharges > 0 && (
                           <>
                             <div>Waiting Time Charges</div>
-                            <div className="text-right">Rs.{waitingTimeCharges.toLocaleString()}</div>
+                            <div className="text-right">
+                              Rs.{waitingTimeCharges.toLocaleString()}
+                            </div>
                           </>
                         )}
 
-                        <div className="font-medium border-t pt-2">Total Payment</div>
-                        <div className="text-right font-medium border-t pt-2">Rs.{totalPayment.toLocaleString()}</div>
+                        <div className="font-medium border-t pt-2">
+                          Total Payment
+                        </div>
+                        <div className="text-right font-medium border-t pt-2">
+                          Rs.{totalPayment.toLocaleString()}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1552,20 +1863,26 @@ export default function RideCalculator() {
                     {serviceType === "vehicle-delivery" && (
                       <>
                         <div className="font-medium">Total Trip Distance</div>
-                        <div className="text-right">{totalDistance.toFixed(2)} KM</div>
+                        <div className="text-right">
+                          {totalDistance.toFixed(2)} KM
+                        </div>
                       </>
                     )}
 
                     {serviceType === "day-time" && (
                       <>
                         <div className="font-medium">Total Trip Time</div>
-                        <div className="text-right font-mono text-primary-600">{finalTripDuration || tripDuration}</div>
+                        <div className="text-right font-mono text-primary-600">
+                          {finalTripDuration || tripDuration}
+                        </div>
                       </>
                     )}
 
                     {serviceType === "day-time" && foodCharges > 0 && (
                       <>
-                        <div className="font-bold text-orange-600 text-lg">Food Charges</div>
+                        <div className="font-bold text-orange-600 text-lg">
+                          Food Charges
+                        </div>
                         <div className="text-right font-bold text-orange-600 text-lg">
                           Rs.{foodCharges.toLocaleString()}
                         </div>
@@ -1596,39 +1913,25 @@ export default function RideCalculator() {
 
                 {serviceType !== "drink-and-drive" && (
                   <div className="bg-primary-50 rounded-lg p-4 text-center mt-4">
-                    <div className="text-sm font-medium text-gray-600">Full Payment Amount</div>
-                    <div className="text-3xl font-bold text-primary-600">Rs.{totalPayment.toLocaleString()}</div>
+                    <div className="text-sm font-medium text-gray-600">
+                      Full Payment Amount
+                    </div>
+                    <div className="text-3xl font-bold text-primary-600">
+                      Rs.{totalPayment.toLocaleString()}
+                    </div>
                   </div>
                 )}
               </div>
             </CardContainer>
 
             <CardContainer>
-              <h3 className="text-lg font-medium mb-4">Customer Details</h3>
+              <h3 className="text-lg font-medium mb-4">Payment Method</h3>
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">Customer Name</label>
-                  <Input
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Enter customer name"
-                    className="h-10"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">Phone Number</label>
-                  <Input
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="Enter phone number"
-                    className="h-10"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium block mb-2">Payment Method</label>
+                  <label className="text-sm font-medium block mb-2">
+                    Select Payment Method
+                  </label>
                   <div className="flex items-center space-x-6">
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -1646,7 +1949,10 @@ export default function RideCalculator() {
                         checked={paymentMethod === "credit"}
                         onCheckedChange={() => setPaymentMethod("credit")}
                       />
-                      <label htmlFor="credit" className="text-sm cursor-pointer">
+                      <label
+                        htmlFor="credit"
+                        className="text-sm cursor-pointer"
+                      >
                         Credit Payment
                       </label>
                     </div>
@@ -1663,9 +1969,9 @@ export default function RideCalculator() {
               {isSaving ? "Saving..." : "End Trip"}
             </Button>
           </motion.div>
-        )
+        );
 
-      case 3:
+      case 4:
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1681,130 +1987,179 @@ export default function RideCalculator() {
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div className="font-medium">Base Trip Charge</div>
-                      <div className="text-right">Rs.{basePayment.toLocaleString()}</div>
+                      <div className="text-right">
+                        Rs.{basePayment.toLocaleString()}
+                      </div>
 
                       {distanceCharges > 0 && (
                         <>
                           <div>Distance Charges (over 10km)</div>
-                          <div className="text-right">Rs.{distanceCharges.toLocaleString()}</div>
+                          <div className="text-right">
+                            Rs.{distanceCharges.toLocaleString()}
+                          </div>
                         </>
                       )}
 
                       {areaCharges > 0 && (
                         <>
                           <div>Area Charges</div>
-                          <div className="text-right">Rs.{areaCharges.toLocaleString()}</div>
+                          <div className="text-right">
+                            Rs.{areaCharges.toLocaleString()}
+                          </div>
                         </>
                       )}
 
                       {waitingTimeCharges > 0 && (
                         <>
                           <div>Waiting Time Charges</div>
-                          <div className="text-right">Rs.{waitingTimeCharges.toLocaleString()}</div>
+                          <div className="text-right">
+                            Rs.{waitingTimeCharges.toLocaleString()}
+                          </div>
                         </>
                       )}
 
-                      <div className="font-medium border-t pt-2">Total Payment</div>
-                      <div className="text-right font-medium border-t pt-2">Rs.{totalPayment.toLocaleString()}</div>
+                      <div className="font-medium border-t pt-2">
+                        Total Payment
+                      </div>
+                      <div className="text-right font-medium border-t pt-2">
+                        Rs.{totalPayment.toLocaleString()}
+                      </div>
 
-                      <div className="font-medium">Company Commission (20%)</div>
-                      <div className="text-right">Rs.{companyCommission.toLocaleString()}</div>
+                      <div className="font-medium">
+                        Company Commission (20%)
+                      </div>
+                      <div className="text-right">
+                        Rs.{companyCommission.toLocaleString()}
+                      </div>
 
                       <div className="font-medium">Driver Payment (80%)</div>
-                      <div className="text-right">Rs.{driverPayment.toLocaleString()}</div>
+                      <div className="text-right">
+                        Rs.{driverPayment.toLocaleString()}
+                      </div>
                     </div>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="font-medium">Total Payment</div>
-                    <div className="text-right">Rs.{totalPayment.toLocaleString()}</div>
+                    <div className="text-right">
+                      Rs.{totalPayment.toLocaleString()}
+                    </div>
 
                     {serviceType === "day-time" && foodCharges > 0 && (
                       <>
                         <div className="font-medium">Base Payment</div>
-                        <div className="text-right">Rs.{basePayment.toLocaleString()}</div>
+                        <div className="text-right">
+                          Rs.{basePayment.toLocaleString()}
+                        </div>
 
                         <div className="font-medium">Food Charges</div>
-                        <div className="text-right">Rs.{foodCharges.toLocaleString()}</div>
+                        <div className="text-right">
+                          Rs.{foodCharges.toLocaleString()}
+                        </div>
                       </>
                     )}
 
                     <div className="font-medium">
-                      Company Commission ({serviceType === "day-time" ? "15% of base" : "20%"})
+                      Company Commission (
+                      {serviceType === "day-time" ? "15% of base" : "20%"})
                     </div>
-                    <div className="text-right">Rs.{companyCommission.toLocaleString()}</div>
+                    <div className="text-right">
+                      Rs.{companyCommission.toLocaleString()}
+                    </div>
 
                     <div className="font-medium">
-                      Driver Payment {serviceType === "day-time" ? "(85% of base + food charges)" : "(80%)"}
+                      Driver Payment{" "}
+                      {serviceType === "day-time"
+                        ? "(85% of base + food charges)"
+                        : "(80%)"}
                     </div>
-                    <div className="text-right">Rs.{driverPayment.toLocaleString()}</div>
+                    <div className="text-right">
+                      Rs.{driverPayment.toLocaleString()}
+                    </div>
                   </div>
                 )}
               </div>
             </CardContainer>
 
-            <Button className="w-full h-12 bg-green-600 hover:bg-green-700 text-white" onClick={handleRideAgain}>
+            <Button
+              className="w-full h-12 bg-green-600 hover:bg-green-700 text-white"
+              onClick={handleRideAgain}
+            >
               Ride Again
             </Button>
           </motion.div>
-        )
+        );
 
       default:
-        return <div>Select a service to begin.</div>
+        return <div>Select a service to begin.</div>;
     }
-  }
+  };
 
   return (
     <MainLayout title={getServiceTitle()}>
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">
           {step === 0
+            ? "Customer Details"
+            : step === 1
             ? serviceType === "day-time-long"
               ? "Service Details"
               : "Pickup Details"
-            : step === 1
-              ? "Drop-off Details"
-              : step === 2
-                ? "Customer Payment"
-                : "Rider Payment"}
+            : step === 2
+            ? "Drop-off Details"
+            : step === 3
+            ? "Payment Summary"
+            : "Rider Payment"}
         </h2>
         {renderStep()}
 
         {/* Temporary Amount Calculation Dialog */}
-        <Dialog open={showTempCalculation} onOpenChange={setShowTempCalculation}>
+        <Dialog
+          open={showTempCalculation}
+          onOpenChange={setShowTempCalculation}
+        >
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Current Trip Amount</DialogTitle>
               <DialogDescription>
-                This is the current amount based on the trip so far. You can continue the trip after closing this
-                window.
+                This is the current amount based on the trip so far. You can
+                continue the trip after closing this window.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-2 text-sm">
-                {(serviceType === "drink-and-drive" || serviceType === "vehicle-delivery") && tempDistance > 0 && (
-                  <>
-                    <div className="font-medium">Current Distance</div>
-                    <div className="text-right">{tempDistance.toFixed(2)} KM</div>
-                  </>
-                )}
+                {(serviceType === "drink-and-drive" ||
+                  serviceType === "vehicle-delivery") &&
+                  tempDistance > 0 && (
+                    <>
+                      <div className="font-medium">Current Distance</div>
+                      <div className="text-right">
+                        {tempDistance.toFixed(2)} KM
+                      </div>
+                    </>
+                  )}
 
                 <div className="font-medium">Current Duration</div>
                 <div className="text-right font-mono">{tempDuration}</div>
 
-                {serviceType === "drink-and-drive" && waitingTimeSeconds > 0 && (
-                  <>
-                    <div className="font-medium">Waiting Time</div>
-                    <div className="text-right font-mono">{tempWaitingTime}</div>
+                {serviceType === "drink-and-drive" &&
+                  waitingTimeSeconds > 0 && (
+                    <>
+                      <div className="font-medium">Waiting Time</div>
+                      <div className="text-right font-mono">
+                        {tempWaitingTime}
+                      </div>
 
-                    {tempWaitingCharges > 0 && (
-                      <>
-                        <div className="font-medium">Waiting Charges</div>
-                        <div className="text-right">Rs.{tempWaitingCharges.toLocaleString()}</div>
-                      </>
-                    )}
-                  </>
-                )}
+                      {tempWaitingCharges > 0 && (
+                        <>
+                          <div className="font-medium">Waiting Charges</div>
+                          <div className="text-right">
+                            Rs.{tempWaitingCharges.toLocaleString()}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
 
                 <div className="font-medium">Pickup Location</div>
                 <div className="text-right">{pickupLocation}</div>
@@ -1817,48 +2172,66 @@ export default function RideCalculator() {
                 <div className="space-y-3 mt-4">
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>Base Trip Charge</div>
-                    <div className="text-right">Rs.{tempBasePayment.toLocaleString()}</div>
+                    <div className="text-right">
+                      Rs.{tempBasePayment.toLocaleString()}
+                    </div>
 
                     {tempDistanceCharges > 0 && (
                       <>
                         <div>Distance Charges (over 10km)</div>
-                        <div className="text-right">Rs.{tempDistanceCharges.toLocaleString()}</div>
+                        <div className="text-right">
+                          Rs.{tempDistanceCharges.toLocaleString()}
+                        </div>
                       </>
                     )}
 
                     {tempAreaCharges > 0 && (
                       <>
                         <div>Area Charges</div>
-                        <div className="text-right">Rs.{tempAreaCharges.toLocaleString()}</div>
+                        <div className="text-right">
+                          Rs.{tempAreaCharges.toLocaleString()}
+                        </div>
                       </>
                     )}
 
                     {tempWaitingCharges > 0 && (
                       <>
                         <div>Waiting Time Charges</div>
-                        <div className="text-right">Rs.{tempWaitingCharges.toLocaleString()}</div>
+                        <div className="text-right">
+                          Rs.{tempWaitingCharges.toLocaleString()}
+                        </div>
                       </>
                     )}
                   </div>
 
                   <div className="bg-primary-50 rounded-lg p-4 text-center">
-                    <div className="text-sm font-medium text-gray-600">Current Total Amount</div>
-                    <div className="text-3xl font-bold text-primary-600">Rs.{tempPayment.toLocaleString()}</div>
+                    <div className="text-sm font-medium text-gray-600">
+                      Current Total Amount
+                    </div>
+                    <div className="text-3xl font-bold text-primary-600">
+                      Rs.{tempPayment.toLocaleString()}
+                    </div>
                   </div>
                 </div>
               ) : (
                 <div className="bg-primary-50 rounded-lg p-4 text-center mt-4">
-                  <div className="text-sm font-medium text-gray-600">Current Amount</div>
-                  <div className="text-3xl font-bold text-primary-600">Rs.{tempPayment.toLocaleString()}</div>
+                  <div className="text-sm font-medium text-gray-600">
+                    Current Amount
+                  </div>
+                  <div className="text-3xl font-bold text-primary-600">
+                    Rs.{tempPayment.toLocaleString()}
+                  </div>
                 </div>
               )}
             </div>
             <DialogFooter>
-              <Button onClick={() => setShowTempCalculation(false)}>Continue Trip</Button>
+              <Button onClick={() => setShowTempCalculation(false)}>
+                Continue Trip
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
     </MainLayout>
-  )
+  );
 }
